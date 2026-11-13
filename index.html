@@ -4,970 +4,540 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0a0505" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>SCORPION · TACTICAL BIATHLON</title>
-<link rel="manifest" id="manifest-link" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0505'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='%23ff2d2d'>🦂</text></svg>" />
 <style>
   :root{
-    --bg:#0a0505; --bg2:#140808; --panel:#170a0a; --panel2:#1f0d0d;
+    --bg:#0a0505; --panel:#170a0a; --panel2:#1f0d0d;
     --line:#3a1414; --line2:#4d1a1a;
     --txt:#f4e8e6; --dim:#a47d7d; --dim2:#6e4a4a;
     --red:#ff2d2d; --red-d:#c41a1a; --red-glow:rgba(255,45,45,.55);
-    --blood:#8b0000; --gold:#ffcf3f;
+    --green:#4ade80; --green-glow:rgba(74,222,128,.4);
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%}
   body{
-    background:
-      radial-gradient(900px 500px at 50% -8%,#2a0a0a 0%,transparent 60%),
-      radial-gradient(700px 400px at 100% 110%,#1a0505 0%,transparent 55%),
-      var(--bg);
-    color:var(--txt);font-family:var(--sans);
-    overscroll-behavior:none;user-select:none;overflow-x:hidden;
-  }
-  body::before{
-    content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.35;
-    background-image:repeating-linear-gradient(0deg,rgba(255,45,45,.03) 0 1px,transparent 1px 3px);
-    mix-blend-mode:overlay;
+    background:radial-gradient(900px 500px at 50% -8%,#2a0a0a 0%,transparent 60%),var(--bg);
+    color:var(--txt);font-family:var(--sans);overscroll-behavior:none;user-select:none;overflow-x:hidden;
   }
   .app{max-width:520px;margin:0 auto;padding:14px 14px calc(24px + env(safe-area-inset-bottom));min-height:100%;position:relative;z-index:2}
   .screen{display:none;animation:fade .35s cubic-bezier(.22,.9,.3,1)}
   .screen.on{display:block}
-  @keyframes fade{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
   header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.8px;font-size:15px}
-  .brand .sc{font-size:24px;filter:drop-shadow(0 0 10px var(--red-glow));animation:scorpionPulse 2.4s ease-in-out infinite}
-  @keyframes scorpionPulse{0%,100%{transform:scale(1) rotate(-4deg)}50%{transform:scale(1.12) rotate(4deg)}}
+  .brand .sc{font-size:24px;filter:drop-shadow(0 0 10px var(--red-glow));animation:scorpionPulse 2.4s infinite}
+  @keyframes scorpionPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
   .brand small{display:block;font-weight:600;color:var(--dim);font-size:9.5px;letter-spacing:2px;margin-top:1px}
-  .brand .brand-name{background:linear-gradient(90deg,var(--txt),var(--red));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 
-  .card{
-    background:linear-gradient(160deg,var(--panel),var(--panel2));
-    border:1px solid var(--line);border-radius:18px;padding:16px;position:relative;overflow:hidden;
-    box-shadow:0 10px 30px -18px #000, inset 0 1px 0 rgba(255,80,80,.06);
-  }
-  .card::after{
-    content:"";position:absolute;top:0;left:0;right:0;height:2px;
-    background:linear-gradient(90deg,transparent,var(--red),transparent);opacity:.55;
-  }
+  .card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:16px;position:relative;overflow:hidden;box-shadow:0 10px 30px -18px #000;}
+  .card::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--red),transparent);opacity:.55;}
   .muted{color:var(--dim);font-size:12.5px;line-height:1.5}
-  h2{margin:0 0 12px;font-size:17px;letter-spacing:.4px;font-weight:800}
-  h3{margin:0 0 8px;font-size:12px;color:var(--red);text-transform:uppercase;letter-spacing:2px;font-weight:800}
-
-  /* ============ SPLASH ============ */
-  #scr-splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 50% 42%,#1f0707 0%,#0a0505 55%,#000 100%);overflow:hidden;
-    transition:opacity .5s ease, visibility .5s ease;}
-  #scr-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
-  .splash-inner{position:relative;width:100%;max-width:440px;padding:20px;text-align:center}
+  h2{margin:0 0 12px;font-size:17px;font-weight:800}
   
-  .crawl-scorpion{position:absolute;font-size:30px;filter:drop-shadow(0 0 12px var(--red-glow));opacity:.9;animation:scorpWalk 7s ease-in-out infinite}
-  .crawl-scorpion.b{bottom:12%;right:-10%;animation-delay:1.4s;font-size:26px;animation-duration:8.5s}
-  .crawl-scorpion.c{top:42%;right:-14%;animation-delay:3s;font-size:20px;animation-duration:10s;opacity:.6}
-  @keyframes scorpWalk{
-    0%{transform:translate(0,0) rotate(-8deg)}
-    25%{transform:translate(40px,-18px) rotate(6deg)}
-    50%{transform:translate(90px,10px) rotate(-6deg)}
-    75%{transform:translate(40px,20px) rotate(8deg)}
-    100%{transform:translate(0,0) rotate(-8deg)}
-  }
-  
-  .splash-logo{font-size:88px;line-height:1;filter:drop-shadow(0 0 28px var(--red-glow));animation:logoPulse 2.2s ease-in-out infinite}
-  @keyframes logoPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-  .splash-title{
-    font-size:30px;font-weight:900;letter-spacing:3px;margin-top:8px;
-    background:linear-gradient(180deg,#fff,#ff5555);
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-    text-shadow:0 0 30px rgba(255,45,45,.35);
-    animation:titleIn .9s cubic-bezier(.2,.9,.3,1) both;
-  }
-  @keyframes titleIn{from{opacity:0;transform:translateY(14px) scale(.94);letter-spacing:8px}to{opacity:1;transform:none;letter-spacing:3px}}
-  .splash-sub{color:var(--dim);font-size:11px;letter-spacing:4px;margin-top:6px;text-transform:uppercase;animation:titleIn 1.1s .2s both}
-  .pulse-track{position:relative;height:60px;margin:26px auto 8px;max-width:360px;overflow:hidden}
-  .pulse-track svg{width:100%;height:100%;display:block}
-  .pulse-line{
-    fill:none;stroke:var(--red);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
-    filter:drop-shadow(0 0 6px var(--red-glow));
-    stroke-dasharray:600;stroke-dashoffset:600;
-    animation:pulseDraw 2.4s cubic-bezier(.6,0,.4,1) infinite;
-  }
-  @keyframes pulseDraw{0%{stroke-dashoffset:600;opacity:.4}40%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:-600;opacity:.4}}
-  .pulse-runner{
-    position:absolute;top:50%;left:0;width:10px;height:10px;margin-top:-5px;border-radius:50%;
-    background:var(--red);box-shadow:0 0 14px 4px var(--red-glow);
-    animation:runner 2.4s cubic-bezier(.6,0,.4,1) infinite;
-  }
-  @keyframes runner{0%{left:0;opacity:.2}40%{left:calc(100% - 10px);opacity:1}70%{left:calc(100% - 10px);opacity:1}100%{left:0;opacity:.2}}
-  .splash-tag{margin-top:24px;display:flex;flex-direction:column;gap:6px;align-items:center;animation:titleIn 1.3s .4s both}
-  .splash-tag .org{font-size:12px;letter-spacing:2px;color:var(--txt);font-weight:700}
-  .splash-tag .org b{color:var(--red)}
-  .splash-tag .chat{font-size:11px;letter-spacing:2px;color:var(--dim)}
-  .splash-load{width:200px;height:3px;border-radius:2px;background:#2a0d0d;margin:22px auto 0;overflow:hidden}
-  .splash-load i{display:block;height:100%;width:40%;background:linear-gradient(90deg,transparent,var(--red),transparent);animation:loadBar 1.4s ease-in-out infinite}
-  @keyframes loadBar{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
-  .splash-hint{position:absolute;bottom:26px;left:0;right:0;text-align:center;font-size:10px;color:var(--dim2);letter-spacing:2px;animation:blink 1.8s ease-in-out infinite}
-  @keyframes blink{0%,100%{opacity:.3}50%{opacity:.9}}
-
-  /* ============ FORM ============ */
-  label{display:block;font-size:11px;color:var(--dim);margin:11px 0 5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700}
-  input,select{
-    width:100%;padding:13px 12px;border-radius:12px;border:1px solid var(--line);
-    background:#0c0505;color:var(--txt);font-size:16px;outline:none;font-family:inherit;transition:.2s;
-  }
+  label{display:block;font-size:11px;color:var(--dim);margin:11px 0 5px;letter-spacing:1px;font-weight:700}
+  input,select{width:100%;padding:13px 12px;border-radius:12px;border:1px solid var(--line);background:#0c0505;color:var(--txt);font-size:16px;outline:none;font-family:inherit;transition:.2s;}
   input:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(255,45,45,.12)}
-  
-  /* Ошибки валидации */
-  input.error, select.error {
-    border-color: var(--red) !important;
-    box-shadow: 0 0 0 3px rgba(255,45,45,.25) !important;
-    animation: shake .3s ease-in-out;
-  }
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-  }
 
-  .team-row{display:flex;gap:8px}
-  .team-row input{flex:1}
-  .quick-teams{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
-  .quick-teams button{
-    padding:7px 12px;border-radius:999px;border:1px solid var(--line2);background:#120707;color:var(--dim);
-    font-size:11.5px;font-weight:700;letter-spacing:.5px;cursor:pointer;font-family:inherit;transition:.15s;
-  }
-  .quick-teams button:hover{border-color:var(--red);color:var(--red)}
-  .quick-teams button.on{background:var(--red-d);border-color:var(--red);color:#fff;box-shadow:0 0 14px -4px var(--red-glow)}
-
-  /* ============ BUTTONS ============ */
-  .btn{
-    width:100%;padding:16px;border-radius:14px;border:1px solid transparent;font-size:16px;
-    font-weight:900;letter-spacing:.6px;cursor:pointer;font-family:inherit;transition:.18s;
-    display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;
-  }
+  .btn{width:100%;padding:16px;border-radius:14px;border:1px solid transparent;font-size:16px;font-weight:900;letter-spacing:.6px;cursor:pointer;font-family:inherit;transition:.18s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;}
   .btn:active{transform:scale(.98)}
-  .btn.primary{
-    background:linear-gradient(180deg,#ff3a3a,#b81414);color:#fff;
-    box-shadow:0 10px 26px -10px var(--red-glow),inset 0 1px 0 rgba(255,255,255,.25);
-  }
-  .btn.primary::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.3) 50%,transparent 70%);transform:translateX(-120%);animation:shine 3.2s ease-in-out infinite}
-  @keyframes shine{0%,60%{transform:translateX(-120%)}80%,100%{transform:translateX(120%)}}
-  .btn.go{background:linear-gradient(180deg,#ff4a4a,#d01e1e);color:#fff;box-shadow:0 10px 26px -10px var(--red-glow)}
+  .btn.primary{background:linear-gradient(180deg,#ff3a3a,#b81414);color:#fff;box-shadow:0 10px 26px -10px var(--red-glow)}
+  .btn.green{background:linear-gradient(180deg,#4ade80,#22c55e);color:#000;box-shadow:0 10px 26px -10px var(--green-glow)}
   .btn.ghost{background:#120707;border-color:var(--line2);color:var(--txt)}
-  .btn.danger{background:transparent;border-color:#5a1a1a;color:#ff6b6b}
+  .btn:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);box-shadow:none;}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+
+  .timer{font-family:var(--mono);font-size:clamp(42px,13vw,60px);font-weight:900;letter-spacing:1px;line-height:1;color:var(--txt);text-align:center;margin:16px 0 6px;}
+  .timer .ms{font-size:.45em;color:var(--red)}
+  .timer.label{font-size:10.5px;letter-spacing:4px;color:var(--dim);font-weight:700;text-align:center}
   
-  /* Неактивная кнопка старта */
-  .btn.primary:disabled {
-    opacity: 0.4;
-    pointer-events: none;
-    filter: grayscale(0.6);
-    box-shadow: none;
-  }
-
-  .btn.pause-btn{
-    background:linear-gradient(180deg,#2a0d0d,#1a0707);border:1px solid var(--red-d);color:var(--red);
-    box-shadow:0 0 18px -8px var(--red-glow);
-  }
-  .btn.pause-btn:hover{background:#2a0d0d;color:#fff}
-  .row{display:flex;gap:10px}
-  .row>*{flex:1}
-
-  /* ============ TIMER ============ */
-  .timer-wrap{text-align:center;padding:16px 0 6px;position:relative;transition:.3s}
-  .timer-wrap.paused{opacity:.55;filter:grayscale(.3)}
-  .timer{font-family:var(--mono);font-size:clamp(42px,13vw,60px);font-weight:900;letter-spacing:1px;line-height:1;color:var(--txt);font-variant-numeric:tabular-nums;text-shadow:0 0 22px rgba(255,45,45,.25)}
-  .timer .ms{font-size:.45em;color:var(--red);margin-left:2px}
-  .timer.label{font-size:10.5px;letter-spacing:4px;color:var(--dim);margin-top:9px;font-weight:700}
-  .pen{font-family:var(--mono);font-size:13px;color:var(--red);margin-top:6px;min-height:16px;font-weight:700;animation:penPulse 1.2s ease-in-out infinite}
-  @keyframes penPulse{0%,100%{opacity:.85}50%{opacity:1;text-shadow:0 0 12px var(--red-glow)}}
-
-  /* Оверлей паузы */
-  .pause-overlay{
-    display:none;position:fixed;inset:0;background:rgba(10,5,5,.92);backdrop-filter:blur(5px);
-    z-index:90;flex-direction:column;align-items:center;justify-content:center;gap:16px;
-    animation:fade .25s ease; padding: 24px;
-  }
-  .pause-overlay.on{display:flex}
-  .pause-overlay .icon{font-size:64px;filter:drop-shadow(0 0 20px var(--red-glow));animation:pausePulse 1.6s ease-in-out infinite}
-  @keyframes pausePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
-  .pause-overlay .txt{font-size:20px;font-weight:900;letter-spacing:4px;color:var(--red);text-transform:uppercase}
-  .pause-overlay .sub{font-size:13px;color:var(--txt);letter-spacing:.5px;text-align:center;line-height:1.5;margin-bottom:10px}
-  
-  .btn-resume-overlay{
-    background:linear-gradient(180deg,#ff3a3a,#b81414);color:#fff;
-    width:auto; min-width:200px; padding:16px 32px; font-size:18px;
-    border-radius:14px; border:none; font-weight:900; letter-spacing:1px; cursor:pointer;
-    box-shadow:0 10px 30px -10px var(--red-glow); transition:.2s;
-  }
-  .btn-resume-overlay:active{transform:scale(.95)}
-
-  /* ============ STAGES ============ */
-  .stage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-  .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px;box-shadow:0 0 12px -3px var(--red-glow)}
-  .stage-title{font-size:20px;font-weight:900;line-height:1.25;margin:4px 0 6px}
-  .stage-desc{color:var(--dim);font-size:13px;line-height:1.5;margin-bottom:14px}
-
-  .progress{display:flex;gap:5px;margin:12px 0 4px}
+  .progress{display:flex;gap:5px;margin:16px 0 6px}
   .pip{flex:1;height:6px;border-radius:3px;background:#2a0e0e;transition:.3s}
-  .pip.done{background:var(--red)}
-  .pip.now{background:var(--red);box-shadow:0 0 12px 2px var(--red-glow);animation:pipPulse 1.4s ease-in-out infinite}
-  @keyframes pipPulse{0%,100%{opacity:1}50%{opacity:.55}}
-  .pips-label{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);margin-top:6px;letter-spacing:1px}
+  .pip.done{background:var(--green);box-shadow:0 0 10px var(--green-glow)}
+  .pip.now{background:var(--red);box-shadow:0 0 10px var(--red-glow);animation:pipPulse 1.4s infinite}
+  @keyframes pipPulse{0%,100%{opacity:1}50%{opacity:.5}}
 
-  /* ============ SHOOTING ============ */
-  .shoot-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
-  .pos{background:#0c0505;border:1px solid var(--line);border-radius:13px;padding:11px 8px;text-align:center;transition:.2s}
-  .pos.active{border-color:var(--red);box-shadow:0 0 16px -4px var(--red-glow)}
-  .pos .nm{font-size:11px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;font-weight:800}
-  .pos .ct{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px}
-  .pos button{width:32px;height:32px;border-radius:9px;border:1px solid var(--line2);background:#140707;color:var(--txt);font-size:18px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s}
-  .pos button:active{background:var(--red);border-color:var(--red);transform:scale(.94)}
-  .pos .val{font-family:var(--mono);font-size:20px;font-weight:900;min-width:20px}
-  .hits .val{color:#6fe06f}
-  .miss .val{color:var(--red)}
-
-  /* ============ CHECKLIST ============ */
-  .check{display:flex;align-items:center;gap:12px;padding:13px 12px;border:1px solid var(--line);border-radius:13px;background:#0c0505;margin-bottom:9px;cursor:pointer;transition:.18s}
-  .check.on{border-color:var(--red);background:#1a0707;box-shadow:0 0 18px -6px var(--red-glow)}
-  .check .box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line2);display:grid;place-items:center;flex:none;font-size:14px;color:transparent;transition:.18s}
-  .check.on .box{background:var(--red);border-color:var(--red);color:#fff}
-  .check .tx{font-size:14px;line-height:1.3}
-
-  /* ============ PISTOL ============ */
-  .pistol-wrap{text-align:center;padding:6px 0 4px}
-  .pistol-svg{width:120px;height:80px;margin:0 auto;display:block;filter:drop-shadow(0 0 14px var(--red-glow))}
-  .pistol-svg .flash{opacity:0;transform-origin:70px 26px}
-  .pistol-wrap.fire .flash{animation:muzzleFlash .28s ease-out}
-  @keyframes muzzleFlash{0%{opacity:1;transform:scale(1.3)}100%{opacity:0;transform:scale(.6)}}
-  .targets{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
-  .target{
-    aspect-ratio:1;border-radius:50%;border:2px solid var(--line2);background:radial-gradient(circle,#140707 0 40%,#1e0909 40% 60%,#2a0d0d 60% 100%);
-    display:grid;place-items:center;cursor:pointer;transition:.15s;position:relative;
-  }
-  .target::after{content:"🎯";font-size:16px;opacity:.35;transition:.15s}
-  .target.hit{border-color:var(--red);background:radial-gradient(circle,#3a0d0d 0 40%,#5a1414 40% 60%,#7a1c1c 60% 100%);box-shadow:0 0 18px -3px var(--red-glow);animation:hitPop .35s ease-out}
-  .target.hit::after{content:"✕";color:#fff;opacity:1;font-size:22px;font-weight:900}
-  @keyframes hitPop{0%{transform:scale(1)}45%{transform:scale(1.18)}100%{transform:scale(1)}}
-  .pistol-stats{display:flex;gap:10px;justify-content:center;margin-top:6px}
-  .pistol-stats div{background:#0c0505;border:1px solid var(--line);border-radius:10px;padding:7px 14px;font-family:var(--mono);font-size:14px;font-weight:800}
-  .pistol-stats .h{color:#6fe06f}
-  .pistol-stats .m{color:var(--red)}
-
-  /* ============ RESULTS ============ */
-  .res-hero{text-align:center;padding:8px 0 4px}
-  .res-hero .big{font-family:var(--mono);font-size:46px;font-weight:900;letter-spacing:1px;text-shadow:0 0 24px rgba(255,45,45,.3)}
-  .res-hero .sub{color:var(--dim);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:6px}
-  .stat-row{display:flex;gap:10px;margin-top:14px}
-  .stat{flex:1;background:#0c0505;border:1px solid var(--line);border-radius:13px;padding:11px 8px;text-align:center}
-  .stat .k{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;font-weight:700}
-  .stat .v{font-family:var(--mono);font-size:19px;font-weight:900;margin-top:4px}
+  .stage-title{font-size:20px;font-weight:900;margin:4px 0 6px}
+  .stage-desc{color:var(--dim);font-size:13px;margin-bottom:14px}
+  .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px;}
+  
+  .judge-item{display:flex;align-items:center;justify-content:space-between;background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;transition:.2s}
+  .judge-item.ready{border-color:var(--red);box-shadow:0 0 14px -4px var(--red-glow)}
+  .judge-item.done{border-color:var(--green);opacity:.6}
+  .judge-item .info{flex:1}
+  .judge-item .name{font-weight:800;font-size:14px}
+  .judge-item .meta{font-size:11px;color:var(--dim);margin-top:2px}
+  .judge-btn{padding:10px 16px;border-radius:10px;font-weight:900;font-size:12px;border:none;cursor:pointer;transition:.15s;background:var(--red-d);color:#fff;}
+  .judge-btn:active{transform:scale(.95)}
+  .judge-btn.green{background:var(--green);color:#000}
+  .judge-btn:disabled{background:#1a0d0d;color:var(--dim);cursor:not-allowed;}
 
   table{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
-  th{text-align:left;font-size:10px;color:var(--red);letter-spacing:1.5px;text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--line2);font-weight:800}
+  th{text-align:left;font-size:10px;color:var(--red);letter-spacing:1px;text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--line2);}
   td{padding:10px 6px;border-bottom:1px solid #240b0b;font-family:var(--mono);font-size:13px}
   td.nm{font-family:inherit;font-weight:700}
-  tr.me td{color:var(--red)}
-  .medal{font-size:16px}
 
-  .cat-title{display:flex;align-items:center;gap:8px;margin:18px 0 6px;font-size:12px;font-weight:900;letter-spacing:2px;color:var(--red);text-transform:uppercase}
-  .cat-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
-
-  .pill-note{display:flex;gap:8px;align-items:flex-start;background:#160606;border:1px solid #3a1212;border-radius:12px;padding:10px 12px;font-size:12px;color:var(--dim);line-height:1.45;margin-top:12px}
-  .pill-note b{color:var(--red)}
-
-  .footer-note{text-align:center;color:var(--dim2);font-size:10px;letter-spacing:2px;margin-top:18px;text-transform:uppercase}
-  .footer-note b{color:var(--red)}
-
-  .toast{
-    position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
-    background:#1c0808;border:1px solid var(--red);color:var(--txt);padding:12px 20px;border-radius:12px;
-    font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:999;
-    box-shadow:0 12px 30px -10px var(--red-glow);
-  }
-  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .footer-note{text-align:center;color:var(--dim2);font-size:10px;letter-spacing:2px;margin-top:18px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:#1c0808;border:1px solid var(--red);color:var(--txt);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:999;text-align:center;max-width:90%;}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
   .toast.err{border-color:var(--red);background:#2a0808}
+  .toast.ok{border-color:var(--green);background:#0a2a10}
 
-  .medal-big{font-size:64px;text-align:center;margin:6px 0 2px;filter:drop-shadow(0 8px 20px rgba(0,0,0,.6));animation:medalPop .6s cubic-bezier(.2,.9,.3,1)}
-  @keyframes medalPop{0%{transform:scale(.4) rotate(-20deg);opacity:0}60%{transform:scale(1.15) rotate(6deg)}100%{transform:scale(1) rotate(0);opacity:1}}
-  .place-txt{text-align:center;font-size:12px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase}
-  .place-txt b{display:block;font-size:20px;color:var(--txt);letter-spacing:.5px;margin-top:3px;text-transform:none}
+  #scr-splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .5s}
+  #scr-splash.hide{opacity:0;pointer-events:none}
+  .splash-title{font-size:30px;font-weight:900;letter-spacing:3px;margin-top:8px;color:#fff;text-align:center}
 </style>
 </head>
 <body>
 
-<!-- ================= SPLASH ================= -->
-<section id="scr-splash" class="screen on">
-  <div class="splash-inner">
-    <div class="crawl-scorpion b">🦂</div>
-    <div class="crawl-scorpion c">🦂</div>
-    <div class="splash-logo">🦂</div>
+<!-- SPLASH -->
+<section id="scr-splash">
+  <div style="text-align:center">
+    <div style="font-size:88px;filter:drop-shadow(0 0 28px var(--red-glow))">🦂</div>
     <div class="splash-title">SCORPION</div>
-    <div class="splash-sub">TACTICAL BIATHLON</div>
-    <div class="pulse-track">
-      <svg viewBox="0 0 360 60" preserveAspectRatio="none">
-        <polyline class="pulse-line" points="0,30 40,30 55,30 65,10 78,50 90,30 120,30 140,30 155,8 168,52 180,30 220,30 240,30 255,14 268,46 280,30 320,30 360,30"/>
-      </svg>
-      <div class="pulse-runner"></div>
-    </div>
-    <div class="splash-tag">
-      <div class="org">ОРГАНИЗАТОР · <b>СК СКОРПИОН</b></div>
-      <div class="chat">ЧАТ · СТРАЙКБОЛ СОЧИ ПУЛЬС</div>
-    </div>
-    <div class="splash-load"><i></i></div>
-    <div class="splash-hint" style="pointer-events:none">ЗАГРУЗКА ТРАССЫ…</div>
+    <div style="color:var(--dim);font-size:11px;letter-spacing:4px;margin-top:6px;text-transform:uppercase">TACTICAL BIATHLON</div>
+    <div style="color:var(--dim2);font-size:10px;margin-top:40px">ЗАГРУЗКА...</div>
   </div>
 </section>
 
-<!-- ОВЕРЛЕЙ ПАУЗЫ -->
-<div class="pause-overlay" id="pause-overlay">
-  <div class="icon">⏸</div>
-  <div class="txt">ПАУЗА</div>
-  <div class="sub">Таймер остановлен.<br>Время не идёт — можно решить нештатную ситуацию.</div>
-  <button class="btn-resume-overlay" onclick="togglePause()">▶ ПРОДОЛЖИТЬ</button>
-</div>
-
 <div class="app">
-
-  <!-- ================= START ================= -->
-  <section id="scr-start" class="screen">
-    <header>
-      <div class="brand"><span class="sc">🦂</span><div><span class="brand-name">SCORPION</span><small>TACTICAL BIATHLON</small></div></div>
-    </header>
+  <!-- ROLE SELECT -->
+  <section id="scr-role" class="screen">
+    <header><div class="brand"><span class="sc">🦂</span><div>РЕЖИМ РАБОТЫ<small>ВЫБЕРИТЕ РОЛЬ</small></div></div></header>
     <div class="card">
-      <h2>Регистрация участника</h2>
-      <p class="muted">Тактическая гонка с препятствиями и стрельбой. Зачёт по времени + штрафы. Медали — по категориям.</p>
-      
-      <label for="fio">ФИО участника</label>
-      <input id="fio" placeholder="Иванов Иван" autocomplete="name" oninput="checkForm()" />
-      
-      <label for="cat">Категория</label>
-      <select id="cat">
-        <option value="junior">Юниор (до 18)</option>
-        <option value="adult" selected>Взрослый (18–39)</option>
-        <option value="veteran">Ветеран (40+)</option>
-      </select>
-      
-      <label for="team">Команда (можно вписать любую)</label>
-      <div class="team-row"><input id="team" placeholder="Название команды" autocomplete="organization" oninput="checkForm()" /></div>
-      <div class="quick-teams">
-        <button type="button" data-team="Сочи Пульс">Сочи Пульс</button>
-        <button type="button" data-team="СК Скорпион">СК Скорпион</button>
-        <button type="button" data-team="Гость">Гость</button>
-      </div>
-      
+      <h2>Кто вы на трассе?</h2>
+      <p class="muted">Участники запускают таймер. Судьи на этапах отмечают прохождение препятствий.</p>
       <div style="height:16px"></div>
-      <button class="btn primary" id="btn-start" onclick="startRun()" disabled>▶ СТАРТ ТРАССЫ</button>
-      <div class="pill-note"><span>🩸</span><div><b>Штрафы:</b> промах +10 с · эвакуация +15 с · жгут +15 с · обход препятствия +30 с.</div></div>
+      <button class="btn primary" onclick="show('scr-start')" style="margin-bottom:10px">🏃 Я УЧАСТНИК</button>
+      <button class="btn ghost" onclick="openJudgeMode()">👮 Я СУДЬЯ НА ЭТАПЕ</button>
     </div>
-    <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="showResults()">🏆 Результаты</button></div>
-    <div class="footer-note">PWA · офлайн · <b>СК Скорпион</b> · Сочи Пульс</div>
   </section>
 
-  <!-- ================= RACE ================= -->
+  <!-- START (Participant) -->
+  <section id="scr-start" class="screen">
+    <header><div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>РЕГИСТРАЦИЯ</small></div></div></header>
+    <div class="card">
+      <h2>Взять старт</h2>
+      <label>ФИО участника</label>
+      <input id="fio" placeholder="Иванов Иван" oninput="checkForm()" />
+      <label>Команда</label>
+      <input id="team" placeholder="Название команды" oninput="checkForm()" />
+      <div style="height:16px"></div>
+      <button class="btn primary" id="btn-start" onclick="startRun()" disabled>▶ СТАРТ ТРАССЫ</button>
+      <div style="margin-top:12px;font-size:12px;color:var(--dim)">
+        <b>Внимание:</b> Судьи на этапах отметят ваше прохождение автоматически.
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="showResults()">🏆 Результаты</button></div>
+  </section>
+
+  <!-- RACE (Participant) -->
   <section id="scr-race" class="screen">
     <header>
       <div class="brand"><span class="sc">🦂</span><div><span id="race-name">—</span><small id="race-meta">—</small></div></div>
       <button class="btn ghost" style="width:auto;padding:9px 13px;font-size:12px" onclick="abortRun()">✕</button>
     </header>
-
     <div class="card">
-      <div class="timer-wrap" id="timer-wrap">
-        <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
-        <div class="timer label">ОБЩЕЕ ВРЕМЯ</div>
-        <div class="pen" id="pen"></div>
-      </div>
-
+      <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
+      <div class="timer label">ОБЩЕЕ ВРЕМЯ</div>
       <div class="progress" id="pips"></div>
-      <div class="pips-label"><span id="step-lbl">ЭТАП 1 / 10</span><span id="stage-split"></span></div>
-
-      <div style="height:12px"></div>
-      <button class="btn pause-btn" id="btn-pause" onclick="togglePause()">⏸ ПАУЗА</button>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:12px">
+        <span id="step-lbl">ЭТАП 1</span><span style="color:var(--green)">🟢 Онлайн</span>
+      </div>
+      <button class="btn pause-btn" id="btn-pause" onclick="togglePause()" style="margin-bottom:12px">⏸ ПАУЗА</button>
     </div>
 
-    <div class="card" style="margin-top:12px">
-      <div class="stage-head">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <span class="badge" id="badge">ЭТАП 1</span>
-        <span class="muted" id="split-info"></span>
       </div>
       <div class="stage-title" id="st-title">—</div>
       <div class="stage-desc" id="st-desc">—</div>
-      <div id="stage-body"></div>
-      <div style="height:12px"></div>
-      <button class="btn go" id="btn-next" onclick="completeStage()">ЭТАП ПРОЙДЕН ✓</button>
+      
+      <div id="wait-judge" style="display:none;text-align:center;padding:20px;border:1px dashed var(--line2);border-radius:14px;margin-top:10px">
+        <div style="font-size:30px;animation:pipPulse 1.5s infinite">⏳</div>
+        <div style="font-weight:900;color:var(--red);margin-top:8px;letter-spacing:1px">ОЖИДАНИЕ СУДЬИ</div>
+        <div class="muted" style="margin-top:4px;font-size:11px">Судья на этом этапе должен засчитать ваш результат</div>
+      </div>
     </div>
   </section>
 
-  <!-- ================= FINISH ================= -->
+  <!-- JUDGE -->
+  <section id="scr-judge" class="screen">
+    <header>
+      <div class="brand"><span class="sc">🦂</span><div>СУДЬЯ<small>ПАНЕЛЬ ЭТАПА</small></div></div>
+      <button class="btn ghost" style="width:auto;padding:9px 13px;font-size:12px" onclick="location.reload()">✕</button>
+    </header>
+    
+    <div class="card">
+      <h2>Выберите ваш этап</h2>
+      <p class="muted">Все судьи видят онлайн-список бегунов. Отмечайте только тех, кто реально выполнил норматив.</p>
+      <div style="height:10px"></div>
+      <label>Мой этап</label>
+      <select id="judge-stage-select" onchange="setJudgeStage()">
+        <option value="">-- Выберите этап --</option>
+      </select>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Бегуны на дистанции</h3>
+      <div id="judge-list"><p class="muted">Ожидание участников...</p></div>
+    </div>
+  </section>
+
+  <!-- FINISH -->
   <section id="scr-finish" class="screen">
     <header><div class="brand"><span class="sc">🦂</span><div>ФИНИШ<small>РЕЗУЛЬТАТ</small></div></div></header>
-    <div class="card">
-      <div class="res-hero">
-        <div class="big" id="fin-time">00:00.00</div>
-        <div class="sub">Зачётное время</div>
-      </div>
-      <div class="stat-row">
-        <div class="stat"><div class="k">Чистое</div><div class="v" id="fin-clean">0:00</div></div>
-        <div class="stat"><div class="k">Штраф</div><div class="v" style="color:var(--red)" id="fin-pen">+0с</div></div>
-        <div class="stat"><div class="k">Промахи</div><div class="v" id="fin-miss">0</div></div>
-      </div>
-      <div class="medal-big" id="fin-medal" style="display:none">🥇</div>
-      <div class="place-txt" id="fin-place" style="display:none">Место<b>1</b></div>
-      <div style="height:14px"></div>
-      <button class="btn primary" onclick="showResults()">🏆 Таблица результатов</button>
-      <div style="height:9px"></div>
+    <div class="card" style="text-align:center;padding:30px 16px">
+      <div style="font-size:64px;filter:drop-shadow(0 0 20px var(--green-glow))">🏁</div>
+      <div style="font-family:var(--mono);font-size:46px;font-weight:900;margin:10px 0" id="fin-time">00:00.00</div>
+      <div class="muted">Чистое время: <b id="fin-clean">0:00</b></div>
+      <div style="height:20px"></div>
+      <button class="btn primary" onclick="showResults()">🏆 Таблица</button>
+      <div style="height:10px"></div>
       <button class="btn ghost" onclick="location.reload()">Новый заезд</button>
     </div>
-    <div class="footer-note">СК Скорпион · Сочи Пульс</div>
   </section>
 
-  <!-- ================= RESULTS ================= -->
+  <!-- RESULTS -->
   <section id="scr-results" class="screen">
-    <header><div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>МЕДАЛИ ПО КАТЕГОРИЯМ</small></div></div></header>
+    <header><div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>ОНЛАЙН ПРОТОКОЛ</small></div></div></header>
     <div class="card">
-      <h3>Тройка призёров</h3>
-      <div id="podium"></div>
-    </div>
-    <div class="card" style="margin-top:12px">
-      <h3>Общий протокол</h3>
-      <div id="tables"></div>
-      <div class="pill-note"><span>📊</span><div>Результаты сохраняются <b>локально</b> и не теряются без сети. Медали — по каждой категории.</div></div>
+      <div id="tables"><p class="muted">Загрузка данных...</p></div>
     </div>
     <div class="row" style="margin-top:12px">
-      <button class="btn ghost" onclick="backToStart()">← На старт</button>
-      <button class="btn danger" onclick="clearAll()">Очистить</button>
+      <button class="btn ghost" onclick="location.reload()">← На главную</button>
+      <button class="btn ghost" onclick="showResults()">🔄 Обновить</button>
     </div>
   </section>
 
   <div class="toast" id="toast"></div>
 </div>
 
-<script>
-/* ============================================================
-   SCORPION TACTICAL BIATHLON — single-file PWA
-   ============================================================ */
-
-/* ---------- STAGES ---------- */
-const STAGES = [
-  { id:'run1',   title:'Бег 50 м',              desc:'Стартовый спринт 50 метров до первого препятствия.', type:'simple' },
-  { id:'crawl1', title:'Пролезание под препятствием', desc:'Пролезть под низким препятствием. Обход запрещён.', type:'simple' },
-  { id:'climb',  title:'Перелезть через препятствие', desc:'Преодолеть высокое препятствие.', type:'simple' },
-  { id:'shoot1', title:'Стрельба: лёжа / сидя / стоя', desc:'Три позиции. Промах = +10 с.', type:'shoot' },
-  { id:'crawl2', title:'Пролезание 10 м под препятствием', desc:'Длинный низкий участок — 10 метров.', type:'simple' },
-  { id:'evac',   title:'Эвакуация раненого (живот)', desc:'Эвакуировать «раненого» с ранением в живот. Контроль техники судьёй.', type:'check',
-    checks:[['Фиксация головы/шеи',10],['Контроль живота (без волочения)',12],['Доставка до безопасной зоны',10]] },
-  { id:'run2',   title:'Бег 50 м',                 desc:'Ускорение к следующему рубежу.', type:'simple' },
-  { id:'tourniquet', title:'Наложение жгута себе на руку', desc:'Самостоятельно наложить жгут. Контроль судьи.', type:'check',
-    checks:[['Жгут выше раны',10],['Достаточное натяжение',8],['Время наложения зафиксировано',5]] },
-  { id:'shoot2', title:'Стрельба из пистолета по мишеням', desc:'Пистолетный рубеж: поразить мишени. Промах = +10 с.', type:'pistol' },
-  { id:'finish', title:'Финишный бег',             desc:'Последний рывок к финишу!', type:'simple' }
-];
-
-const PENALTY = { miss:10, obstacle:30 };
-
-/* ---------- STATE ---------- */
-let state = null;
-let timerRAF = null;
-let wakeLock = null;
-
-/* ---------- STORAGE ---------- */
-const DB_KEY = 'scorpion_tb_runs_v1';
-function loadRuns(){ try{ return JSON.parse(localStorage.getItem(DB_KEY)||'[]'); }catch(e){ return []; } }
-function saveRuns(r){ try{ localStorage.setItem(DB_KEY, JSON.stringify(r)); }catch(e){} }
-function addRun(run){ const r=loadRuns(); r.push(run); saveRuns(r); }
-
-/* ---------- HELPERS ---------- */
-function $(id){ return document.getElementById(id); }
-function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on'); window.scrollTo(0,0); }
-let toastT=null;
-function toast(msg, err){
-  const t=$('toast'); t.textContent=msg; t.classList.toggle('err',!!err); t.classList.add('on');
-  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2200);
-}
-function fmt(ms){
-  if(ms<0) ms=0;
-  const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), cs=Math.floor(ms%1000/10);
-  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<span class="ms">.${String(cs).padStart(2,'0')}</span>`;
-}
-function fmtShort(ms){ const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
-function vibrate(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
-
-/* ============================================================
-   ELAPSED-TIME MODEL (pause-aware)
-   ============================================================ */
-function elapsedMs(){
-  if(!state) return 0;
-  const now = Date.now();
-  let paused = state.pausedTotal || 0;
-  if(state.pauseStartedAt) paused += (now - state.pauseStartedAt);
-  return Math.max(0, now - state.startAt - paused);
-}
-function isPaused(){ return !!(state && state.pauseStartedAt); }
-
-/* ---------- ВАЛИДАЦИЯ ФОРМЫ ---------- */
-function checkForm() {
-  const fio = $('fio').value.trim();
-  const team = $('team').value.trim();
-  const btn = $('btn-start');
-  
-  // Если есть ошибки, убираем их при вводе
-  if (fio) $('fio').classList.remove('error');
-  if (team) $('team').classList.remove('error');
-  
-  // Кнопка активна, только если оба поля заполнены
-  if (fio && team) {
-    btn.disabled = false;
-  } else {
-    btn.disabled = true;
-  }
-}
-
-/* ---------- START ---------- */
-function startRun(){
-  const fio=$('fio').value.trim();
-  const team=$('team').value.trim();
-  
-  // Повторная проверка на всякий случай
-  if (!fio || !team) {
-    if (!fio) $('fio').classList.add('error');
-    if (!team) $('team').classList.add('error');
-    toast('Заполните ФИО и Команду!', true);
-    vibrate([20, 50, 20]);
-    return;
-  }
-
-  state = {
-    fio, cat: $('cat').value, team,
-    startAt: Date.now(),
-    pausedTotal: 0,
-    pauseStartedAt: null,
-    stageIdx: 0,
-    splits: [],
-    penalties: 0,
-    misses: 0,
-    shoot: {},
-    pistol: {},
-    checks: {},
-    finished: false
+<script type="module">
+  /* ============================================================
+     1. НАСТРОЙКА FIREBASE (ТВОИ КЛЮЧИ)
+     ============================================================ */
+  const firebaseConfig = {
+    apiKey: "AIzaSyDkqYJJ6t3DzhPN7U80UM9TcppSfpaeEJ4",
+    authDomain: "scorpion-race.firebaseapp.com",
+    databaseURL: "https://scorpion-race-default-rtdb.firebaseio.com",
+    projectId: "scorpion-race",
+    storageBucket: "scorpion-race.firebasestorage.app",
+    messagingSenderId: "635578405699",
+    appId: "1:635578405699:web:81752eded70408480255f6",
+    measurementId: "G-7YJRYDKJ0C"
   };
-  $('race-name').textContent = fio;
-  $('race-meta').textContent = `${team} · ${labelCat(state.cat)}`;
-  show('scr-race');
-  buildPips();
-  renderStage();
-  startTimer();
-  requestWakeLock();
-}
 
-function labelCat(c){ return c==='junior'?'Юниор':c==='veteran'?'Ветеран':'Взрослый'; }
+  // Подключаем Firebase (только нужные модули, без аналитики для скорости)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-function startTimer(){
-  cancelAnimationFrame(timerRAF);
-  const tick=()=>{
-    const el=$('timer'); if(!el){ return; }
-    el.innerHTML = fmt(elapsedMs());
-    $('pen').textContent = state.penalties>0 ? `штраф +${state.penalties} с` : '';
-    timerRAF=requestAnimationFrame(tick);
-  };
-  tick();
-}
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-function buildPips(){
-  const w=$('pips'); w.innerHTML='';
-  STAGES.forEach((s,i)=>{
-    const d=document.createElement('div');
-    d.className='pip'+(i<state.stageIdx?' done':i===state.stageIdx?' now':'');
-    w.appendChild(d);
-  });
-}
+  /* ============================================================
+     2. КОНСТАНТЫ И ЭТАПЫ
+     ============================================================ */
+  const STAGES = [
+    { id:'run1',   title:'Бег 50 м',              desc:'Стартовый спринт 50 метров.' },
+    { id:'crawl1', title:'Пролезание под препятствием', desc:'Низкое препятствие.' },
+    { id:'climb',  title:'Перелезть через препятствие', desc:'Высокое препятствие.' },
+    { id:'shoot1', title:'Стрельба: лёжа / сидя / стоя', desc:'Три позиции.' },
+    { id:'crawl2', title:'Пролезание 10 м',        desc:'Длинный низкий участок.' },
+    { id:'evac',   title:'Эвакуация раненого',     desc:'Ранение в живот.' },
+    { id:'run2',   title:'Бег 50 м',               desc:'Ускорение.' },
+    { id:'tourniquet', title:'Наложение жгута',    desc:'Себе на руку.' },
+    { id:'shoot2', title:'Стрельба из пистолета',  desc:'По мишеням.' },
+    { id:'finish', title:'Финишный бег',           desc:'Последний рывок!' }
+  ];
 
-/* ============================================================
-   PAUSE / RESUME
-   ============================================================ */
-function togglePause(){
-  if(!state || state.finished) return;
-  if(isPaused()) resumeRun(); else pauseRun();
-}
+  let state = null;
+  let timerRAF = null;
+  let currentParticipantId = null;
+  let unsubListener = null;
 
-function pauseRun(){
-  if(isPaused()) return;
-  state.pauseStartedAt = Date.now();
-  $('pause-overlay').classList.add('on');
-  $('timer-wrap').classList.add('paused');
-  $('btn-pause').innerHTML = '▶ ПРОДОЛЖИТЬ';
-  $('btn-pause').classList.add('go');
-  $('btn-pause').classList.remove('pause-btn');
-  vibrate([20,60,20]);
-  toast('⏸ Пауза — таймер остановлен');
-}
-
-function resumeRun(){
-  if(!isPaused()) return;
-  const dur = Date.now() - state.pauseStartedAt;
-  state.pausedTotal += dur;
-  state.pauseStartedAt = null;
-  
-  $('pause-overlay').classList.remove('on');
-  $('timer-wrap').classList.remove('paused');
-  $('btn-pause').innerHTML = '⏸ ПАУЗА';
-  $('btn-pause').classList.remove('go');
-  $('btn-pause').classList.add('pause-btn');
-  
-  vibrate([15,40,15]);
-  toast('▶ Продолжаем — таймер пошёл');
-}
-
-/* ============================================================
-   STAGE RENDER
-   ============================================================ */
-function renderStage(){
-  const i=state.stageIdx, st=STAGES[i];
-  $('badge').textContent = `ЭТАП ${i+1}`;
-  $('step-lbl').textContent = `ЭТАП ${i+1} / ${STAGES.length}`;
-  $('st-title').textContent = st.title;
-  $('st-desc').textContent = st.desc;
-  $('split-info').textContent = state.splits.length ? `прошлый сплит: ${fmtShort(state.splits[state.splits.length-1].ms)}` : '';
-
-  const body=$('stage-body'); body.innerHTML='';
-  
-  if(st.type==='shoot'){
-    body.appendChild(buildShootForm(st));
-    $('btn-next').textContent='СТРЕЛЬБА ЗАВЕРШЕНА ✓';
-  } else if(st.type==='check'){
-    body.appendChild(buildCheckList(st));
-    $('btn-next').textContent='ЭТАП ПРОЙДЕН ✓';
-  } else if(st.type==='pistol'){
-    body.appendChild(buildPistol(st));
-    $('btn-next').textContent='ПИСТОЛЕТНЫЙ РУБЕЖ ЗАВЕРШЁН ✓';
-  } else {
-    $('btn-next').textContent='ЭТАП ПРОЙДЕН ✓';
+  /* ============================================================
+     3. УТИЛИТЫ
+     ============================================================ */
+  const $ = id => document.getElementById(id);
+  function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on'); window.scrollTo(0,0); }
+  let toastT = null;
+  function toast(msg, type='') {
+    const t = $('toast'); t.textContent = msg; t.className = 'toast on ' + type;
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3000);
   }
-  buildPips();
-}
+  function fmt(ms){ if(ms<0) ms=0; const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), cs=Math.floor(ms%1000/10); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<span class="ms">.${String(cs).padStart(2,'0')}</span>`; }
+  function fmtShort(ms){ const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
 
-function buildShootForm(st){
-  const wrap=document.createElement('div');
-  const prev = state.shoot[st.id] || { lying:{hits:0,miss:0}, sitting:{hits:0,miss:0}, standing:{hits:0,miss:0} };
-  state.shoot[st.id]=prev;
+  /* ============================================================
+     4. ЛОГИКА УЧАСТНИКА
+     ============================================================ */
+  window.checkForm = function() {
+    const fio = $('fio').value.trim(), team = $('team').value.trim();
+    $('btn-start').disabled = !(fio && team);
+  }
 
-  ['lying','sitting','standing'].forEach(pos=>{
-    const p=document.createElement('div'); p.className='pos';
-    const nm = pos==='lying'?'Лёжа':pos==='sitting'?'Сидя':'Стоя';
-    p.innerHTML=`<div class="nm">${nm}</div>
-      <div class="ct">
-        <div class="hits"><div class="val" data-h="${pos}">${prev[pos].hits}</div></div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          <button data-act="hit+" data-pos="${pos}">+</button>
-          <button data-act="hit-" data-pos="${pos}">−</button>
-        </div>
-      </div>
-      <div class="ct" style="margin-top:6px">
-        <div class="miss"><div class="val" data-m="${pos}">${prev[pos].miss}</div></div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          <button data-act="miss+" data-pos="${pos}">+</button>
-          <button data-act="miss-" data-pos="${pos}">−</button>
-        </div>
-      </div>
-      <div class="muted" style="font-size:10px;margin-top:6px;text-align:left">↑ попадания / промахи ↓</div>`;
-    wrap.appendChild(p);
-  });
+  window.startRun = async function() {
+    const fio = $('fio').value.trim(), team = $('team').value.trim();
+    if(!fio || !team) return;
 
-  wrap.addEventListener('click', e=>{
-    if(isPaused()) return;
-    const b=e.target.closest('button'); if(!b) return;
-    const pos=b.dataset.pos, act=b.dataset.act;
-    const o=state.shoot[st.id][pos];
-    if(act==='hit+') o.hits++;
-    if(act==='hit-'&&o.hits>0) o.hits--;
-    if(act==='miss+') o.miss++;
-    if(act==='miss-'&&o.miss>0) o.miss--;
-    wrap.querySelector(`[data-h="${pos}"]`).textContent=o.hits;
-    wrap.querySelector(`[data-m="${pos}"]`).textContent=o.miss;
-    vibrate(8);
-  });
-  return wrap;
-}
-
-function buildCheckList(st){
-  const wrap=document.createElement('div');
-  if(!state.checks[st.id]) state.checks[st.id]=st.checks.map(()=>false);
-  st.checks.forEach((c,idx)=>{
-    const el=document.createElement('div');
-    el.className='check'+(state.checks[st.id][idx]?' on':'');
-    el.innerHTML=`<div class="box">✓</div><div class="tx">${c[0]} <span class="muted">(+${c[1]} с)</span></div>`;
-    el.onclick=()=>{
-      if(isPaused()) return;
-      state.checks[st.id][idx]=!state.checks[st.id][idx];
-      el.classList.toggle('on', state.checks[st.id][idx]);
-      vibrate(8);
+    currentParticipantId = 'user_' + Date.now();
+    state = {
+      id: currentParticipantId, fio, team,
+      startAt: Date.now(), pausedTotal: 0, pauseStartedAt: null,
+      stageIdx: 0, finished: false
     };
-    wrap.appendChild(el);
-  });
-  return wrap;
-}
 
-/* ---------- PISTOL ---------- */
-function buildPistol(st){
-  const wrap=document.createElement('div');
-  wrap.className='pistol-wrap';
-  if(!state.pistol[st.id]) state.pistol[st.id] = { hits:0, miss:0, hitsArr:[] };
-  const p=state.pistol[st.id];
-
-  wrap.innerHTML = `
-    <svg class="pistol-svg" viewBox="0 0 120 80">
-      <rect x="14" y="24" width="56" height="14" rx="3" fill="#2a0d0d" stroke="#ff2d2d" stroke-width="1.5"/>
-      <rect x="60" y="14" width="10" height="20" rx="2" fill="#3a1212" stroke="#ff2d2d" stroke-width="1.5"/>
-      <path d="M14 38 L14 56 L30 62 L38 62 L40 38 Z" fill="#2a0d0d" stroke="#ff2d2d" stroke-width="1.5"/>
-      <rect x="30" y="20" width="4" height="6" fill="#ff2d2d"/>
-      <g class="flash">
-        <polygon points="70,26 84,20 76,26 88,30 72,30 78,36 66,30" fill="#ffcf3f" opacity=".9"/>
-      </g>
-    </svg>
-    <div class="targets" id="targets"></div>
-    <div class="pistol-stats">
-      <div class="h">✓ <span id="p-hits">0</span></div>
-      <div class="m">✕ <span id="p-miss">0</span></div>
-    </div>
-  `;
-
-  const targetsEl = wrap.querySelector('#targets');
-  for(let i=0;i<5;i++){
-    const t=document.createElement('div'); t.className='target';
-    if(p.hitsArr[i]) t.classList.add('hit');
-    t.onclick=()=>{
-      if(isPaused()) return;
-      p.hitsArr[i] = !p.hitsArr[i];
-      t.classList.toggle('hit', p.hitsArr[i]);
-      wrap.classList.remove('fire'); void wrap.offsetWidth; wrap.classList.add('fire');
-      vibrate(12);
-      recalcPistol(st);
-    };
-    targetsEl.appendChild(t);
-  }
-  recalcPistol(st);
-  return wrap;
-}
-function recalcPistol(st){
-  const p=state.pistol[st.id];
-  let hits=0; for(let i=0;i<5;i++) if(p.hitsArr[i]) hits++;
-  p.hits=hits; p.miss=5-hits;
-  const h=document.getElementById('p-hits'); const m=document.getElementById('p-miss');
-  if(h) h.textContent=p.hits; if(m) m.textContent=p.miss;
-}
-
-/* ---------- COMPLETE STAGE ---------- */
-function completeStage(){
-  if(isPaused()){ 
-    toast('Сначала снимите паузу!', true); 
-    return; 
-  }
-  
-  const i=state.stageIdx, st=STAGES[i];
-  const now=Date.now();
-
-  if(st.type==='shoot'){
-    const s=state.shoot[st.id];
-    let miss=0; ['lying','sitting','standing'].forEach(p=>{ miss += s[p].miss; });
-    state.misses += miss;
-    state.penalties += miss*PENALTY.miss;
-    if(miss>0) toast(`Промахи: ${miss} · штраф +${miss*PENALTY.miss} с`, true);
-  }
-  if(st.type==='pistol'){
-    const p=state.pistol[st.id];
-    state.misses += p.miss;
-    state.penalties += p.miss*PENALTY.miss;
-    if(p.miss>0) toast(`Промахи: ${p.miss} · штраф +${p.miss*PENALTY.miss} с`, true);
-  }
-  if(st.type==='check'){
-    const arr=state.checks[st.id];
-    let pen=0;
-    st.checks.forEach((c,idx)=>{ if(!arr[idx]) pen += c[1]; });
-    state.penalties += pen;
-    if(pen>0) toast(`Не отмечено корректно: штраф +${pen} с`, true);
-  }
-
-  const prevEnd = state.lastEndAt || state.startAt;
-  const nowClean = state.startAt + elapsedMs();
-  state.splits.push({ stage: st.id, ms: nowClean - prevEnd, at: now });
-  state.lastEndAt = nowClean;
-  state.stageIdx++;
-
-  if(state.stageIdx >= STAGES.length){ finishRun(); }
-  else {
-    renderStage();
-    $('stage-split').textContent = `сплит: ${fmtShort(state.splits[state.splits.length-1].ms)}`;
-    vibrate([10,30,10]);
-  }
-}
-
-/* ---------- FINISH ---------- */
-function finishRun(){
-  cancelAnimationFrame(timerRAF);
-  releaseWakeLock();
-  const cleanMs = elapsedMs();
-  const total = cleanMs + state.penalties*1000;
-  state.finished = true;
-  state.totalMs = total;
-  state.cleanMs = cleanMs;
-  state.endedAt = Date.now();
-
-  const run = {
-    fio: state.fio, cat: state.cat, team: state.team,
-    totalMs: total, cleanMs, penalties: state.penalties,
-    misses: state.misses, at: state.endedAt
-  };
-  addRun(run);
-
-  $('fin-time').innerHTML = fmt(total);
-  $('fin-clean').textContent = fmtShort(cleanMs);
-  $('fin-pen').textContent = `+${state.penalties}с`;
-  $('fin-miss').textContent = state.misses;
-
-  const peers = loadRuns().filter(r=>r.cat===state.cat).sort((a,b)=>a.totalMs-b.totalMs);
-  const place = peers.findIndex(r=>r.at===run.at && r.totalMs===run.totalMs)+1;
-  const medal = place===1?'🥇':place===2?'🥈':place===3?'🥉':null;
-  const pm=$('fin-medal'), pp=$('fin-place');
-  if(medal){ pm.style.display='block'; pm.textContent=medal; }
-  else { pm.style.display='none'; }
-  pp.style.display='block';
-  pp.innerHTML=`Место в категории<b>${place} из ${peers.length}</b>`;
-
-  show('scr-finish');
-  vibrate([40,60,40,60,120]);
-}
-
-/* ---------- ABORT ---------- */
-function abortRun(){
-  if(isPaused()){
-    if(!confirm('Заезд на паузе. Прервать заезд? Результат не будет сохранён.')) return;
-  } else {
-    if(!confirm('Прервать заезд? Результат не будет сохранён.')) return;
-  }
-  cancelAnimationFrame(timerRAF);
-  releaseWakeLock();
-  state=null;
-  $('pause-overlay').classList.remove('on');
-  show('scr-start');
-}
-
-/* ---------- RESULTS ---------- */
-function showResults(){
-  cancelAnimationFrame(timerRAF);
-  releaseWakeLock();
-  const runs = loadRuns();
-  renderPodium(runs);
-  renderTables(runs);
-  show('scr-results');
-}
-function renderPodium(runs){
-  const box=$('podium');
-  const top = [...runs].sort((a,b)=>a.totalMs-b.totalMs).slice(0,3);
-  if(!top.length){ box.innerHTML='<p class="muted">Пока нет результатов. Пройди трассу первым!</p>'; return; }
-  const medals=['🥇','🥈','🥉'];
-  box.innerHTML = top.map((r,i)=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #240b0b">
-      <div class="medal" style="font-size:24px">${medals[i]}</div>
-      <div style="flex:1"><div style="font-weight:700">${esc(r.fio)}</div>
-      <div class="muted" style="font-size:11px">${esc(r.team)} · ${labelCat(r.cat)}</div></div>
-      <div style="font-family:var(--mono);font-weight:800;color:var(--red)">${fmtShort(r.totalMs)}</div>
-    </div>`).join('');
-}
-function renderTables(runs){
-  const box=$('tables');
-  if(!runs.length){ box.innerHTML='<p class="muted">Нет данных.</p>'; return; }
-  const cats=['junior','adult','veteran']; let html='';
-  cats.forEach(c=>{
-    const list=runs.filter(r=>r.cat===c).sort((a,b)=>a.totalMs-b.totalMs);
-    if(!list.length) return;
-    html += `<div class="cat-title">${labelCat(c)}</div>`;
-    html += `<table><thead><tr><th>#</th><th>Участник</th><th>Команда</th><th>Время</th></tr></thead><tbody>`;
-    list.forEach((r,i)=>{
-      const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-      html += `<tr><td>${m||i+1}</td><td class="nm">${esc(r.fio)}</td><td style="font-family:inherit;color:var(--dim)">${esc(r.team)}</td><td>${fmtShort(r.totalMs)}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-  });
-  box.innerHTML = html;
-}
-function esc(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function backToStart(){ show('scr-start'); }
-function clearAll(){
-  if(!confirm('Удалить все результаты? Действие необратимо.')) return;
-  localStorage.removeItem(DB_KEY);
-  toast('Результаты очищены');
-  showResults();
-}
-
-/* ---------- WAKE LOCK ---------- */
-async function requestWakeLock(){ try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
-function releaseWakeLock(){ try{ wakeLock && wakeLock.release(); }catch(e){} }
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState==='visible' && state && !state.finished && !isPaused()){ requestWakeLock(); }
-});
-
-/* ---------- PWA INIT ---------- */
-(function initPWA(){
-  const manifest = {
-    name: "SCORPION Tactical Biathlon",
-    short_name: "Scorpion TB",
-    description: "Тактический биатлон — Сочи Пульс / СК Скорпион",
-    start_url: ".", display: "standalone",
-    background_color: "#0a0505", theme_color: "#0a0505",
-    orientation: "portrait",
-    icons: [{ src: "data:image/svg+xml,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='#0a0505'/><text x='256' y='340' font-size='260' text-anchor='middle' fill='#ff2d2d'>🦂</text></svg>`), sizes:"512x512", type:"image/svg+xml", purpose:"any" }]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
-  document.getElementById('manifest-link').href = URL.createObjectURL(blob);
-
-  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
-    const swCode = `
-      const CACHE='scorpion-tb-v5';
-      const SHELL=[location.href];
-      self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL).catch(()=>{}))); });
-      self.addEventListener('activate',e=>{ e.waitUntil(self.clients.claim()); });
-      self.addEventListener('fetch',e=>{
-        if(e.request.method!=='GET') return;
-        e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
-          const cp=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,cp).catch(()=>{})); return res;
-        }).catch(()=>caches.match(location.href))));
+    $('race-name').textContent = fio;
+    $('race-meta').textContent = team;
+    
+    // Отправляем в Firebase
+    try {
+      await set(ref(db, 'races/' + currentParticipantId), {
+        id: currentParticipantId, fio, team,
+        startAt: state.startAt,
+        stageIdx: 0,
+        status: 'running'
       });
-    `;
-    const swBlob = new Blob([swCode], {type:'text/javascript'});
-    navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+    } catch(e) { toast('Ошибка сети!', 'err'); }
+
+    show('scr-race');
+    buildPips();
+    renderStage();
+    startTimer();
+    listenOnlineUpdates();
   }
 
-  // Заставка: пропуск по тапу или через 5 сек
-  $('scr-splash').addEventListener('click', skipSplash);
-  setTimeout(skipSplash, 5000);
+  function startTimer() {
+    cancelAnimationFrame(timerRAF);
+    const tick = () => {
+      if(!state) return;
+      let paused = state.pausedTotal;
+      if(state.pauseStartedAt) paused += (Date.now() - state.pauseStartedAt);
+      const ms = Math.max(0, Date.now() - state.startAt - paused);
+      $('timer').innerHTML = fmt(ms);
+      timerRAF = requestAnimationFrame(tick);
+    };
+    tick();
+  }
 
-  // Быстрый выбор команды
-  document.querySelectorAll('.quick-teams button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      document.querySelectorAll('.quick-teams button').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on');
-      $('team').value = b.dataset.team;
-      checkForm(); // проверяем форму при клике на чипс
+  function buildPips() {
+    const w = $('pips'); w.innerHTML = '';
+    STAGES.forEach((s, i) => {
+      const d = document.createElement('div');
+      d.className = 'pip' + (i < state.stageIdx ? ' done' : i === state.stageIdx ? ' now' : '');
+      w.appendChild(d);
     });
-  });
-})();
+    $('step-lbl').textContent = `ЭТАП ${Math.min(state.stageIdx + 1, STAGES.length)} / ${STAGES.length}`;
+  }
 
-let splashSkipped = false;
-function skipSplash(){
-  if(splashSkipped) return;
-  splashSkipped = true;
-  const splash = $('scr-splash');
-  splash.classList.add('hide');
+  function renderStage() {
+    if(state.stageIdx >= STAGES.length) return;
+    const st = STAGES[state.stageIdx];
+    $('badge').textContent = `ЭТАП ${state.stageIdx + 1}`;
+    $('st-title').textContent = st.title;
+    $('st-desc').textContent = st.desc;
+    $('wait-judge').style.display = 'block';
+    buildPips();
+  }
+
+  window.togglePause = function() {
+    if(!state || state.finished) return;
+    if(state.pauseStartedAt) {
+      state.pausedTotal += Date.now() - state.pauseStartedAt;
+      state.pauseStartedAt = null;
+      $('btn-pause').textContent = '⏸ ПАУЗА';
+      toast('▶ Таймер пошёл', 'ok');
+    } else {
+      state.pauseStartedAt = Date.now();
+      $('btn-pause').textContent = '▶ ПРОДОЛЖИТЬ';
+      toast('⏸ Пауза');
+    }
+  }
+
+  function listenOnlineUpdates() {
+    if(!currentParticipantId) return;
+    const raceRef = ref(db, 'races/' + currentParticipantId);
+    
+    unsubListener = onValue(raceRef, (snap) => {
+      const data = snap.val();
+      if(!data) return;
+      
+      if (data.stageIdx > state.stageIdx) {
+        state.stageIdx = data.stageIdx;
+        if (state.stageIdx >= STAGES.length) {
+          finishRun();
+        } else {
+          renderStage();
+          toast('✅ Этап засчитан судьёй!', 'ok');
+          if(navigator.vibrate) navigator.vibrate([50, 100, 50]);
+        }
+      }
+    });
+  }
+
+  async function finishRun() {
+    cancelAnimationFrame(timerRAF);
+    state.finished = true;
+    let paused = state.pausedTotal;
+    if(state.pauseStartedAt) paused += (Date.now() - state.pauseStartedAt);
+    const cleanMs = Date.now() - state.startAt - paused;
+    
+    try {
+      await set(ref(db, 'races/' + currentParticipantId), {
+        ...state, status: 'finished', finishAt: Date.now(), cleanMs
+      });
+    } catch(e){}
+
+    $('fin-time').innerHTML = fmt(cleanMs);
+    $('fin-clean').textContent = fmtShort(cleanMs);
+    show('scr-finish');
+  }
+
+  window.abortRun = function() {
+    if(!confirm('Прервать заезд?')) return;
+    if(currentParticipantId) {
+      set(ref(db, 'races/' + currentParticipantId), { status: 'aborted' });
+    }
+    cancelAnimationFrame(timerRAF);
+    location.reload();
+  }
+
+  /* ============================================================
+     5. ЛОГИКА СУДЬИ
+     ============================================================ */
+  let judgeStage = null;
+
+  window.openJudgeMode = function() {
+    show('scr-judge');
+    initJudgeSelect();
+    listenAllRaces();
+  }
+
+  function initJudgeSelect() {
+    const sel = $('judge-stage-select');
+    sel.innerHTML = '<option value="">-- Выберите этап --</option>';
+    STAGES.forEach((st, i) => {
+      sel.innerHTML += `<option value="${i}">Этап ${i+1}: ${st.title}</option>`;
+    });
+  }
+
+  window.setJudgeStage = function() {
+    const val = $('judge-stage-select').value;
+    judgeStage = val === '' ? null : parseInt(val);
+    renderJudgeList();
+  }
+
+  let allRaces = {};
+
+  function listenAllRaces() {
+    const racesRef = ref(db, 'races');
+    onValue(racesRef, (snap) => {
+      allRaces = snap.val() || {};
+      renderJudgeList();
+    });
+  }
+
+  function renderJudgeList() {
+    const box = $('judge-list');
+    if (judgeStage === null) {
+      box.innerHTML = '<p class="muted">Сначала выберите ваш этап выше.</p>';
+      return;
+    }
+
+    const runners = Object.values(allRaces).filter(r => r.status === 'running');
+    
+    if (!runners.length) {
+      box.innerHTML = '<p class="muted">Сейчас никто не бежит.</p>';
+      return;
+    }
+
+    box.innerHTML = '';
+    // Сортируем по времени старта
+    runners.sort((a,b) => b.startAt - a.startAt).forEach(r => {
+      const isDone = r.stageIdx > judgeStage;
+      const isOnMyStage = r.stageIdx === judgeStage;
+      
+      const div = document.createElement('div');
+      div.className = `judge-item ${isOnMyStage ? 'ready' : ''} ${isDone ? 'done' : ''}`;
+      
+      let btnHtml = '';
+      if (isDone) {
+        btnHtml = `<button class="judge-btn green" disabled>✓ ПРОЙДЕН</button>`;
+      } else if (isOnMyStage) {
+        btnHtml = `<button class="judge-btn" onclick="judgeComplete('${r.id}', ${judgeStage})">ЗАСЧИТАТЬ</button>`;
+      } else {
+        btnHtml = `<button class="judge-btn" disabled>ЖДЁМ</button>`;
+      }
+
+      div.innerHTML = `
+        <div class="info">
+          <div class="name">${r.fio}</div>
+          <div class="meta">${r.team} · Сейчас на этапе ${r.stageIdx + 1}</div>
+        </div>
+        ${btnHtml}
+      `;
+      box.appendChild(div);
+    });
+  }
+
+  window.judgeComplete = async function(participantId, stageIdx) {
+    if(!confirm('Засчитать этап?')) return;
+    
+    try {
+      await set(ref(db, 'races/' + participantId + '/stageIdx'), stageIdx + 1);
+      toast('✅ Участник отправлен дальше!', 'ok');
+      if(navigator.vibrate) navigator.vibrate(100);
+    } catch(e) {
+      toast('Ошибка! Проверьте связь.', 'err');
+    }
+  }
+
+  /* ============================================================
+     6. РЕЗУЛЬТАТЫ
+     ============================================================ */
+  window.showResults = function() {
+    show('scr-results');
+    const box = $('tables');
+    
+    onValue(ref(db, 'races'), (snap) => {
+      const data = snap.val() || {};
+      const finished = Object.values(data).filter(r => r.status === 'finished');
+      
+      if (!finished.length) {
+        box.innerHTML = '<p class="muted">Пока нет финишировавших.</p>';
+        return;
+      }
+
+      finished.sort((a,b) => a.cleanMs - b.cleanMs);
+
+      let html = `<table><thead><tr><th>#</th><th>Участник</th><th>Команда</th><th>Время</th></tr></thead><tbody>`;
+      finished.forEach((r, i) => {
+        const m = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+        html += `<tr>
+          <td>${m}</td>
+          <td class="nm">${r.fio}</td>
+          <td style="color:var(--dim)">${r.team}</td>
+          <td>${fmtShort(r.cleanMs)}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      box.innerHTML = html;
+    });
+  }
+
+  /* ============================================================
+     7. ИНИЦИАЛИЗАЦИЯ
+     ============================================================ */
   setTimeout(() => {
-    splash.style.display = 'none';
-    show('scr-start');
-    checkForm(); // проверяем при старте
-  }, 500);
-}
+    $('scr-splash').classList.add('hide');
+    show('scr-role');
+  }, 2000);
 
-document.addEventListener('gesturestart', e=>e.preventDefault());
 </script>
 </body>
 </html>
