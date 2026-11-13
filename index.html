@@ -152,8 +152,8 @@
   .btn-mini.ghost{background:#1a0d0d;border:1px solid var(--line2);color:var(--txt)}
   .btn-mini:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);}
 
-  /* ============ ЧАТ (FAB) ============ */
-  .radio-fab {
+  /* ============ ЧАТЫ ============ */
+  .chat-fab {
     position: fixed; bottom: 20px; right: 20px; z-index: 900;
     width: 64px; height: 64px; border-radius: 50%;
     background: linear-gradient(135deg, var(--red), #800000);
@@ -161,8 +161,8 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 28px; cursor: pointer; transition: 0.2s;
   }
-  .radio-fab:active { transform: scale(0.9); }
-  .radio-fab .badge-dot {
+  .chat-fab:active { transform: scale(0.9); }
+  .chat-fab .badge-dot {
     position: absolute; top: 0; right: 0; width: 16px; height: 16px;
     background: var(--gold); border-radius: 50%; border: 2px solid var(--bg);
     display: none; animation: pulse 1s infinite;
@@ -178,7 +178,7 @@
   .radio-window {
     width: 100%; max-width: 480px; background: var(--panel);
     border: 1px solid var(--line2); border-radius: 20px; overflow: hidden;
-    display: flex; flex-direction: column; max-height: 85vh;
+    display: flex; flex-direction: column; max-height: 85vh; position: relative;
   }
   .radio-header {
     padding: 12px 16px; background: #120707; border-bottom: 1px solid var(--line2);
@@ -197,7 +197,7 @@
   .msg .author { font-size: 10px; color: var(--blue); margin-bottom: 4px; display: block; font-weight: bold; }
   .msg .time-txt { font-size: 9px; color: var(--dim); text-align: right; margin-top: 4px; }
   
-  /* Кнопка удаления сообщения (только для главного судьи) */
+  /* Кнопка удаления сообщения (только для модераторов) */
   .del-msg-btn {
     background: transparent; border: none; color: #555; font-size: 16px; cursor: pointer; 
     display: flex; align-items: flex-start; padding: 0;
@@ -206,9 +206,24 @@
   
   .radio-controls { padding: 16px; background: #120707; border-top: 1px solid var(--line2); display: flex; flex-direction: column; gap: 10px; }
   
-  .text-input-row { display: flex; width: 100%; gap: 8px; }
+  .text-input-row { display: flex; width: 100%; gap: 8px; align-items:center; }
   .text-input-row input { flex: 1; padding: 12px; font-size: 14px; border-radius: 10px; }
-  .text-input-row button { width: 60px; padding: 0; border-radius: 10px; }
+  .text-input-row button { width: 50px; height: 44px; padding: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px;}
+
+  /* Панель эмодзи */
+  .emoji-panel {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 250px;
+    background: #120707; border-top: 1px solid var(--line2);
+    display: none; flex-wrap: wrap; gap: 10px; padding: 15px;
+    overflow-y: auto; z-index: 10; align-content: flex-start;
+  }
+  .emoji-panel.on { display: flex; }
+  .emoji-panel span {
+    font-size: 24px; cursor: pointer; padding: 5px; border-radius: 8px;
+    transition: 0.1s; user-select: none; display: flex; align-items: center; justify-content: center;
+  }
+  .emoji-panel span:hover { background: rgba(255,255,255,0.1); }
+  .emoji-panel span:active { transform: scale(0.9); }
 
   /* ============ RESULTS ============ */
   .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; }
@@ -431,7 +446,7 @@
   </div>
 </div>
 
-<!-- МОДАЛЬНОЕ ОКНО ЧАТА -->
+<!-- МОДАЛЬНОЕ ОКНО ЧАТА СУДЕЙ -->
 <div class="radio-modal" id="radio-modal">
   <div class="radio-window">
     <div class="radio-header">
@@ -441,10 +456,37 @@
     <div class="radio-chat" id="radio-chat">
       <div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>
     </div>
+    
+    <div class="emoji-panel" id="emoji-panel-judge"></div>
+
     <div class="radio-controls">
       <div class="text-input-row">
-        <input id="radio-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg()" />
-        <button class="btn primary" onclick="sendTextMsg()" style="padding:0;">➤</button>
+        <input id="radio-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg('judge')" />
+        <button class="btn ghost" onclick="toggleEmojiPanel('judge')">😀</button>
+        <button class="btn primary" onclick="sendTextMsg('judge')">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ОБЩЕГО ЧАТА -->
+<div class="radio-modal" id="general-modal">
+  <div class="radio-window">
+    <div class="radio-header">
+      <div class="radio-title">📢 Общий чат</div>
+      <button class="radio-close" onclick="toggleGeneralChat()">✕</button>
+    </div>
+    <div class="radio-chat" id="general-chat">
+      <div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>
+    </div>
+
+    <div class="emoji-panel" id="emoji-panel-general"></div>
+
+    <div class="radio-controls">
+      <div class="text-input-row">
+        <input id="general-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg('general')" />
+        <button class="btn ghost" onclick="toggleEmojiPanel('general')">😀</button>
+        <button class="btn primary" onclick="sendTextMsg('general')">➤</button>
       </div>
     </div>
   </div>
@@ -463,6 +505,9 @@
         <button class="btn ghost" onclick="promptJudgeLogin()">👮 СУДЬЯ НА ЭТАПЕ</button>
         <button class="btn primary" onclick="openRegistration()">📝 РЕГИСТРАЦИЯ НА ТУРНИР</button>
         <button class="btn green" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
+        
+        <div style="height:10px; border-bottom:1px solid var(--line2); margin: 5px 0 12px;"></div>
+        <button class="btn ghost" onclick="toggleGeneralChat()">📢 ОБЩИЙ ЧАТ (ВСЕ УЧАСТНИКИ)</button>
       </div>
     </div>
 
@@ -653,8 +698,8 @@
     </div>
   </section>
 
-  <!-- FAB ЧАТА -->
-  <div class="radio-fab" id="radio-fab" onclick="toggleRadio()" style="display:none;">
+  <!-- FAB ЧАТА СУДЕЙ -->
+  <div class="chat-fab" id="radio-fab" onclick="toggleRadio()" style="display:none;">
     💬
     <div class="badge-dot" id="radio-badge"></div>
   </div>
@@ -716,9 +761,13 @@
   let currentPenaltyTargetId = null;
   let currentFilter = 'all';
 
-  // Чат
-  let lastMsgTime = 0;
+  // Чаты
+  let lastMsgTimeJudge = 0;
+  let lastMsgTimeGeneral = 0;
   let isRadioOpen = false;
+  let isGeneralOpen = false;
+
+  const EMOJIS = ['😀','😂','🤣','😎','🔥','🚀','👍','💪','🦂','🎯','🏃','🪖','🧗','🚑','🩸','🔫','🏁','📢','💬','🤝','⚡','💯','😤','🥇','🥈','🥉','🤯','🙌','👊','✊'];
 
   /* ============================================================
      3. УТИЛИТЫ
@@ -913,38 +962,62 @@
   }
 
   /* ============================================================
-     5. ЧАТ СУДЕЙ (ТЕКСТОВЫЙ)
+     5. ЧАТЫ (СУДЕЙСКИЙ И ОБЩИЙ)
      ============================================================ */
   
-  window.toggleRadio = function() {
-    isRadioOpen = !isRadioOpen;
-    $('radio-modal').classList.toggle('on', isRadioOpen);
+  // --- Инициализация панелей эмодзи ---
+  function initEmojiPanels() {
+    const panelJudge = $('emoji-panel-judge');
+    const panelGeneral = $('emoji-panel-general');
     
-    if (isRadioOpen) {
-      $('radio-badge').style.display = 'none';
-      scrollChatToBottom();
-      lastMsgTime = Date.now();
-      onValue(ref(db, 'radio_messages'), renderRadioChat);
+    EMOJIS.forEach(emoji => {
+      const span1 = document.createElement('span'); span1.textContent = emoji;
+      span1.onclick = () => { $('radio-text-input').value += emoji; $('radio-text-input').focus(); };
+      panelJudge.appendChild(span1);
+
+      const span2 = document.createElement('span'); span2.textContent = emoji;
+      span2.onclick = () => { $('general-text-input').value += emoji; $('general-text-input').focus(); };
+      panelGeneral.appendChild(span2);
+    });
+  }
+  initEmojiPanels();
+
+  window.toggleEmojiPanel = function(type) {
+    if(type === 'judge') {
+      $('emoji-panel-judge').classList.toggle('on');
+      $('radio-text-input').focus();
+    } else {
+      $('emoji-panel-general').classList.toggle('on');
+      $('general-text-input').focus();
     }
   }
 
-  function scrollChatToBottom() {
-    const chat = $('radio-chat');
-    setTimeout(() => chat.scrollTop = chat.scrollHeight, 100);
+  // --- Логика чата судей ---
+  window.toggleRadio = function() {
+    isRadioOpen = !isRadioOpen;
+    $('radio-modal').classList.toggle('on', isRadioOpen);
+    $('emoji-panel-judge').classList.remove('on');
+    
+    if (isRadioOpen) {
+      $('radio-badge').style.display = 'none';
+      scrollChatToBottom('radio-chat');
+      lastMsgTimeJudge = Date.now();
+      onValue(ref(db, 'radio_messages'), renderJudgeChat);
+    }
   }
 
-  function renderRadioChat(snap) {
+  function renderJudgeChat(snap) {
     const data = snap.val() || {};
     const messages = Object.entries(data).sort((a,b) => a[1].time - b[1].time);
     const chat = $('radio-chat');
     
     let hasNew = false;
     messages.forEach(([id, m]) => {
-      if (m.time > lastMsgTime) hasNew = true;
+      if (m.time > lastMsgTimeJudge) hasNew = true;
     });
     
     if (hasNew) {
-      lastMsgTime = Date.now();
+      lastMsgTimeJudge = Date.now();
       if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
 
@@ -952,11 +1025,12 @@
     if (!messages.length) {
       chat.innerHTML = '<div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>';
     } else {
-      const isMainJudge = sessionStorage.getItem('mj_auth') === 'true';
+      // Модераторы: Главный судья и обычные судьи
+      const isModerator = sessionStorage.getItem('mj_auth') === 'true' || sessionStorage.getItem('judge_name') !== null;
       
       messages.forEach(([id, m]) => {
-        const delHtml = isMainJudge 
-          ? `<button class="del-msg-btn" onclick="deleteChatMessage('${id}')">✕</button>` 
+        const delHtml = isModerator 
+          ? `<button class="del-msg-btn" onclick="deleteChatMessage('radio_messages', '${id}')">✕</button>` 
           : '';
           
         chat.innerHTML += `
@@ -971,33 +1045,99 @@
         `;
       });
     }
-    scrollChatToBottom();
+    scrollChatToBottom('radio-chat');
 
     if (!isRadioOpen && messages.length > 0) {
       $('radio-badge').style.display = 'block';
     }
   }
 
-  window.sendTextMsg = async function() {
-    const text = $('radio-text-input').value.trim();
+  window.sendTextMsg = async function(type) {
+    const inputId = type === 'judge' ? 'radio-text-input' : 'general-text-input';
+    const text = $(inputId).value.trim();
     if (!text) return;
-    $('radio-text-input').value = '';
+    $(inputId).value = '';
+    
+    // Скрываем панель эмодзи при отправке
+    $('emoji-panel-judge').classList.remove('on');
+    $('emoji-panel-general').classList.remove('on');
+
+    const dbPath = type === 'judge' ? 'radio_messages' : 'general_messages';
 
     try {
-      await push(ref(db, 'radio_messages'), {
+      await push(ref(db, dbPath), {
         text: text,
-        author: currentJudgeName || 'Судья',
+        author: currentJudgeName || 'Участник', // Если судья - его имя, если участник - "Участник"
         time: Date.now(),
         timeStr: getTimeNow()
       });
     } catch(e) { toast('Ошибка отправки', 'err'); }
   }
 
-  // Удаление сообщения (только главный судья)
-  window.deleteChatMessage = async function(id) {
+  // --- Логика ОБЩЕГО чата ---
+  window.toggleGeneralChat = function() {
+    isGeneralOpen = !isGeneralOpen;
+    $('general-modal').classList.toggle('on', isGeneralOpen);
+    $('emoji-panel-general').classList.remove('on');
+    
+    if (isGeneralOpen) {
+      scrollChatToBottom('general-chat');
+      lastMsgTimeGeneral = Date.now();
+      onValue(ref(db, 'general_messages'), renderGeneralChat);
+    }
+  }
+
+  function renderGeneralChat(snap) {
+    const data = snap.val() || {};
+    const messages = Object.entries(data).sort((a,b) => a[1].time - b[1].time);
+    const chat = $('general-chat');
+    
+    let hasNew = false;
+    messages.forEach(([id, m]) => {
+      if (m.time > lastMsgTimeGeneral) hasNew = true;
+    });
+    
+    if (hasNew) {
+      lastMsgTimeGeneral = Date.now();
+      if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    }
+
+    chat.innerHTML = '';
+    if (!messages.length) {
+      chat.innerHTML = '<div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>';
+    } else {
+      const isModerator = sessionStorage.getItem('mj_auth') === 'true' || sessionStorage.getItem('judge_name') !== null;
+      
+      messages.forEach(([id, m]) => {
+        const delHtml = isModerator 
+          ? `<button class="del-msg-btn" onclick="deleteChatMessage('general_messages', '${id}')">✕</button>` 
+          : '';
+          
+        chat.innerHTML += `
+          <div class="msg">
+            <div class="msg-text">
+              <span class="author">${m.author}</span>
+              <div>${m.text}</div>
+              <div class="time-txt">${m.timeStr}</div>
+            </div>
+            ${delHtml}
+          </div>
+        `;
+      });
+    }
+    scrollChatToBottom('general-chat');
+  }
+
+  function scrollChatToBottom(chatId) {
+    const chat = $(chatId);
+    setTimeout(() => chat.scrollTop = chat.scrollHeight, 100);
+  }
+
+  // Удаление сообщений (для модераторов)
+  window.deleteChatMessage = async function(dbPath, id) {
     if(!confirm('Удалить это сообщение?')) return;
     try {
-      await remove(ref(db, 'radio_messages/' + id));
+      await remove(ref(db, dbPath + '/' + id));
       toast('Сообщение удалено', 'ok');
     } catch(e) { toast('Ошибка удаления', 'err'); }
   }
@@ -1044,7 +1184,7 @@
     requestWakeLock();
     
     $('radio-fab').style.display = 'flex';
-    onValue(ref(db, 'radio_messages'), renderRadioChat);
+    onValue(ref(db, 'radio_messages'), renderJudgeChat);
   }
 
   function listenPreRegistrations() {
@@ -1439,7 +1579,7 @@
     requestWakeLock();
     
     $('radio-fab').style.display = 'flex';
-    onValue(ref(db, 'radio_messages'), renderRadioChat);
+    onValue(ref(db, 'radio_messages'), renderJudgeChat);
   }
 
   function initJudgeSelect() {
