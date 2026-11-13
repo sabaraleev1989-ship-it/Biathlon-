@@ -15,7 +15,8 @@
     --red:#ff2d2d; --red-d:#c41a1a; --red-glow:rgba(255,45,45,.55);
     --green:#4ade80; --green-glow:rgba(74,222,128,.4);
     --blue:#60a5fa; --blue-glow:rgba(96,165,250,.4);
-    --gold:#ffcf3f; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --gold:#ffcf3f; --lime:#a3ff5c; --lime-glow:rgba(163,255,92,.5);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -76,6 +77,50 @@
   .btn.danger{background:transparent;border-color:#5a1a1a;color:#ff6b6b}
   .btn:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);box-shadow:none;}
   .row{display:flex;gap:10px} .row>*{flex:1}
+
+  /* ============ СТЕКЛЯННАЯ САЛАТОВАЯ КНОПКА (ЧАТ СУДЕЙ) ============ */
+  .btn.lime-glass {
+    background: linear-gradient(135deg,
+      rgba(163,255,92,0.28) 0%,
+      rgba(125,255,58,0.18) 50%,
+      rgba(163,255,92,0.28) 100%);
+    border: 1px solid rgba(200,255,170,0.6);
+    color: #d8ffb0;
+    text-shadow: 0 0 10px rgba(163,255,92,0.7);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.35),
+      inset 0 -1px 0 rgba(163,255,92,0.15),
+      0 0 20px rgba(163,255,92,0.35),
+      0 6px 20px -8px rgba(163,255,92,0.5);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  /* Статичный блик (без анимации — не греет) */
+  .btn.lime-glass::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 18%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(110deg,
+      transparent 0%,
+      rgba(255,255,255,0.28) 50%,
+      transparent 100%);
+    transform: skewX(-20deg);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .btn.lime-glass:active {
+    transform: scale(.97);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      inset 0 -1px 0 rgba(163,255,92,0.2),
+      0 0 30px rgba(163,255,92,0.6),
+      0 6px 20px -8px rgba(163,255,92,0.7);
+  }
 
   /* ============ MAIN MENU ============ */
   #scr-role {
@@ -153,21 +198,6 @@
   .btn-mini:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);}
 
   /* ============ ЧАТЫ ============ */
-  .chat-fab {
-    position: fixed; bottom: 20px; right: 20px; z-index: 900;
-    width: 64px; height: 64px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--red), #800000);
-    border: 2px solid var(--red-glow); box-shadow: 0 4px 20px rgba(255,0,0,0.4);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; cursor: pointer; transition: 0.2s;
-  }
-  .chat-fab:active { transform: scale(0.9); }
-  .chat-fab .badge-dot {
-    position: absolute; top: 0; right: 0; width: 16px; height: 16px;
-    background: var(--gold); border-radius: 50%; border: 2px solid var(--bg);
-    display: none; animation: pulse 1s infinite;
-  }
-  
   /* Модалка чата */
   .radio-modal {
     position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85);
@@ -541,6 +571,7 @@
         
         <div style="height:10px; border-bottom:1px solid var(--line2); margin: 5px 0 12px;"></div>
         <button class="btn ghost" onclick="toggleGeneralChat()">📢 ОБЩИЙ ЧАТ (ВСЕ УЧАСТНИКИ)</button>
+        <button class="btn lime-glass" id="judge-chat-btn" onclick="toggleRadio()" style="display:none;">👮‍♂️ ЧАТ СУДЕЙ</button>
       </div>
     </div>
 
@@ -729,12 +760,6 @@
     </div>
   </section>
 
-  <!-- FAB ЧАТА СУДЕЙ -->
-  <div class="chat-fab" id="radio-fab" onclick="toggleRadio()" style="display:none;">
-    💬
-    <div class="badge-dot" id="radio-badge"></div>
-  </div>
-
   <div class="toast" id="toast"></div>
 </div>
 
@@ -776,23 +801,12 @@
   ];
 
   let state = null;
-  let timerRAF = null;
-  let currentParticipantId = null;
-  
-  let localStartAt = 0;
-  let localPausedTotal = 0;
-  let localPauseStartedAt = null;
-
-  let mainJudgeRAF = null; 
-  let judgePageRAF = null; 
-
   let currentJudgeName = '';
   let wakeLock = null;
 
   let currentPenaltyTargetId = null;
   let currentFilter = 'all';
 
-  // Чаты
   let lastMsgTimeJudge = 0;
   let lastMsgTimeGeneral = 0;
   let isRadioOpen = false;
@@ -816,6 +830,7 @@
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); 
     $(id).classList.add('on'); 
     window.scrollTo(0,0); 
+    updateJudgeChatBtn();
   }
   
   let toastT = null;
@@ -824,7 +839,6 @@
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3000);
   }
   
-  function fmt(ms){ if(ms<0) ms=0; const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), cs=Math.floor(ms%1000/10); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<span class="ms">.${String(cs).padStart(2,'0')}</span>`; }
   function fmtShort(ms){ const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
   function fmtLap(ms){ if(!ms) return ''; const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
   
@@ -870,6 +884,15 @@
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
   });
+
+  // Показ/скрытие кнопки "Чат судей" на главном экране
+  function updateJudgeChatBtn() {
+    const btn = $('judge-chat-btn');
+    if (!btn) return;
+    const isMJ = localStorage.getItem('mj_auth') === 'true';
+    const isJudge = !!localStorage.getItem('judge_name');
+    btn.style.display = (isMJ || isJudge) ? 'flex' : 'none';
+  }
 
   function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null, penalties = {}) {
     if (!container) return;
@@ -1025,7 +1048,6 @@
 
   window.onChatInput = function(chat) {
     const now = Date.now();
-    // Троттлинг: не чаще 1.5с
     if (now - typingThrottle[chat] > 1500) {
       typingThrottle[chat] = now;
       const info = getTypingRole();
@@ -1037,7 +1059,6 @@
       }).catch(() => {});
     }
     
-    // Сброс через 3 секунды после последнего ввода
     clearTimeout(typingTimers[chat]);
     typingTimers[chat] = setTimeout(() => {
       stopTyping(chat);
@@ -1104,7 +1125,6 @@
     $('radio-modal').classList.toggle('on', isRadioOpen);
     
     if (isRadioOpen) {
-      $('radio-badge').style.display = 'none';
       scrollChatToBottom('radio-chat');
       lastMsgTimeJudge = Date.now();
       onValue(ref(db, 'radio_messages'), renderJudgeChat);
@@ -1160,10 +1180,6 @@
       });
     }
     scrollChatToBottom('radio-chat');
-
-    if (!isRadioOpen && messages.length > 0) {
-      $('radio-badge').style.display = 'block';
-    }
   }
 
   function getParticipantNickname() {
@@ -1341,10 +1357,10 @@
     localStorage.removeItem('mj_name');
     toast('Вы вышли');
     show('scr-role');
-    $('radio-fab').style.display = 'none';
     isGeneralOpen = false;
     $('general-modal').classList.remove('on');
     releaseWakeLock();
+    updateJudgeChatBtn();
   }
 
   window.openMainJudge = function() {
@@ -1354,9 +1370,6 @@
     startMJTimer();
     updateConnectionStatus(navigator.onLine);
     requestWakeLock();
-    
-    $('radio-fab').style.display = 'flex';
-    onValue(ref(db, 'radio_messages'), renderJudgeChat);
   }
 
   function listenPreRegistrations() {
@@ -1443,7 +1456,6 @@
   }
 
   function startMJTimer() {
-    cancelAnimationFrame(mainJudgeRAF);
     const tick = () => {
       if (!$('scr-main-judge').classList.contains('on')) return;
       
@@ -1454,7 +1466,7 @@
           el.textContent = fmtShort(calcMs(start, pausedTotal, null));
         }
       });
-      mainJudgeRAF = requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     };
     tick();
   }
@@ -1632,6 +1644,7 @@
     show('scr-role');
     isGeneralOpen = false;
     $('general-modal').classList.remove('on');
+    updateJudgeChatBtn();
   }
 
   function listenParticipantList() {
@@ -1738,11 +1751,11 @@
     localStorage.removeItem('judge_stage');
     toast('Вы вышли. Этап сброшен.');
     show('scr-role');
-    $('radio-fab').style.display = 'none';
     judgeStage = null;
     isGeneralOpen = false;
     $('general-modal').classList.remove('on');
     releaseWakeLock();
+    updateJudgeChatBtn();
   }
 
   window.openJudgeMode = function(forceSelect = false) {
@@ -1762,9 +1775,6 @@
     startJudgeTimer(); 
     updateConnectionStatus(navigator.onLine);
     requestWakeLock();
-    
-    $('radio-fab').style.display = 'flex';
-    onValue(ref(db, 'radio_messages'), renderJudgeChat);
   }
 
   function initJudgeSelect() {
@@ -1798,7 +1808,6 @@
   }
 
   function startJudgeTimer() {
-    cancelAnimationFrame(judgePageRAF);
     const tick = () => {
       if (!$('scr-judge').classList.contains('on')) return;
       
@@ -1809,7 +1818,7 @@
           el.textContent = fmtShort(calcMs(start, pausedTotal, null));
         }
       });
-      judgePageRAF = requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     };
     tick();
   }
@@ -2098,19 +2107,19 @@
      АВТОВОССТАНОВЛЕНИЕ СЕССИИ
      ============================================================ */
   function restoreSession() {
-    // Главный судья
     if (localStorage.getItem('mj_auth') === 'true') {
       currentJudgeName = localStorage.getItem('mj_name') || 'Главный судья';
       $('mj-name-display').textContent = currentJudgeName;
       openMainJudge();
+      updateJudgeChatBtn();
       return true;
     }
-    // Обычный судья
     if (localStorage.getItem('judge_name') && localStorage.getItem('judge_stage')) {
       currentJudgeName = localStorage.getItem('judge_name');
       judgeStage = parseInt(localStorage.getItem('judge_stage'));
       $('judge-name-display').textContent = currentJudgeName;
       openJudgeMode();
+      updateJudgeChatBtn();
       return true;
     }
     return false;
@@ -2118,6 +2127,7 @@
 
   setTimeout(() => {
     $('scr-splash').classList.add('hide');
+    updateJudgeChatBtn();
     const restored = restoreSession();
     if (!restored) {
       show('scr-role');
