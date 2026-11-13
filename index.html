@@ -108,6 +108,8 @@
   .stage-row .ico { font-size: 16px; width: 20px; text-align: center;}
   .stage-row .nm { font-size: 12px; font-weight: 700; flex: 1;}
   .stage-row .st { font-size: 14px; font-weight: 900;}
+  /* Время выполнения этапа */
+  .stage-row .lap { font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: bold; width: 50px; text-align: right;}
 
   .judge-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-mini{padding:14px 12px;border-radius:10px;font-weight:900;font-size:14px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px; min-height: 48px; text-align: center;}
@@ -492,7 +494,7 @@
 
 <script type="module">
   /* ============================================================
-     1. НАСТРОЙКА FIREBASE (Без Storage)
+     1. НАСТРОЙКА FIREBASE
      ============================================================ */
   const firebaseConfig = {
     apiKey: "AIzaSyDkqYJJ6t3DzhPN7U80UM9TcppSfpaeEJ4",
@@ -551,6 +553,7 @@
   let lastMsgTime = 0;
   let isRadioOpen = false;
   let mediaStream = null;
+  let beepCtx = null;
 
   /* ============================================================
      3. УТИЛИТЫ
@@ -570,6 +573,8 @@
   
   function fmt(ms){ if(ms<0) ms=0; const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), cs=Math.floor(ms%1000/10); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<span class="ms">.${String(cs).padStart(2,'0')}</span>`; }
   function fmtShort(ms){ const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
+  function fmtLap(ms){ if(!ms) return ''; const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
+  
   function calcMs(start, pausedTotal, pauseStartedAt) {
     let ms = Date.now() - start - (pausedTotal || 0);
     if (pauseStartedAt) ms -= (Date.now() - pauseStartedAt);
@@ -578,6 +583,26 @@
   function getTimeNow() {
     const d = new Date();
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+
+  function playBeep(freq, duration) {
+    try {
+      if (!beepCtx) beepCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (beepCtx.state === 'suspended') beepCtx.resume();
+      
+      const osc = beepCtx.createOscillator();
+      const gain = beepCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(beepCtx.destination);
+      
+      gain.gain.setValueAtTime(0.1, beepCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, beepCtx.currentTime + duration);
+      
+      osc.start();
+      osc.stop(beepCtx.currentTime + duration);
+    } catch(e) {}
   }
 
   function updateConnectionStatus(isOnline) {
@@ -603,12 +628,14 @@
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
   });
 
-  function renderStagesMap(container, currentStageIdx) {
+  function renderStagesMap(container, currentStageIdx, laps = {}) {
     if (!container) return;
     let html = '';
     STAGES.forEach((st, i) => {
       let cls = '';
       let stIco = '';
+      let lapTime = laps[i] ? fmtLap(laps[i]) : '';
+      
       if (i < currentStageIdx) { cls = 'done'; stIco = '✅'; }
       else if (i === currentStageIdx) { cls = 'now'; stIco = '⏳'; }
       else { cls = ''; stIco = '⚪'; }
@@ -617,6 +644,7 @@
         <div class="stage-row ${cls}">
           <div class="ico">${st.ico}</div>
           <div class="nm">${st.short}</div>
+          <div class="lap">${lapTime}</div>
           <div class="st">${stIco}</div>
         </div>
       `;
@@ -648,14 +676,13 @@
   }
 
   /* ============================================================
-     4. РАЦИЯ (СЖАТИЕ + БАЗА ДАННЫХ)
+     4. РАЦИЯ (ЗАГРУЗКА НА ВНЕШНИЙ СЕРВИС)
      ============================================================ */
   
   async function initMicrophone() {
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Устанавливаем низкий битрейт для сжатия (экономия места в базе)
-      mediaRecorder = new MediaRecorder(mediaStream, { audioBitsPerSecond: 16000 });
+      mediaRecorder = new MediaRecorder(mediaStream, { audioBitsPerSecond: 32000 });
       
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
@@ -663,7 +690,6 @@
         audioChunks = [];
         await uploadVoiceMessage(audioBlob);
         
-        // Останавливаем поток, чтобы погасить системный значок микрофона
         if (mediaStream) {
           mediaStream.getTracks().forEach(track => track.stop());
           mediaStream = null;
@@ -684,7 +710,7 @@
     if (isRadioOpen) {
       $('radio-badge').style.display = 'none';
       scrollChatToBottom();
-      lastMsgTime = Date.now(); // Сбрасываем счетчик при открытии
+      lastMsgTime = Date.now();
       onValue(ref(db, 'radio_messages'), renderRadioChat);
     }
   }
@@ -712,18 +738,11 @@
     chat.innerHTML = '';
     messages.forEach(m => {
       if (m.type === 'voice') {
-        let audioUrl = m.url;
-        // Если аудио разбито на чанки, склеиваем
-        if (m.chunks) {
-          audioUrl = m.chunks.join('');
-        }
-        
-        // Встраиваем нативный аудиоплеер
         chat.innerHTML += `
           <div class="msg voice">
             <span class="author">${m.author} [${m.timeStr}]</span>
             <div>🎙 Голосовое сообщение:</div>
-            <audio class="audio-player" controls src="${audioUrl}"></audio>
+            <audio class="audio-player" controls src="${m.url}"></audio>
           </div>
         `;
       } else {
@@ -765,6 +784,7 @@
     e.preventDefault();
     
     if (!isRecording) {
+      playBeep(800, 0.1); // Звук старта
       const ok = await initMicrophone();
       if (!ok) return;
       
@@ -777,6 +797,7 @@
       if(navigator.vibrate) navigator.vibrate(50);
       
     } else {
+      playBeep(600, 0.15); // Звук стопа
       isRecording = false;
       btnPtt.classList.remove('recording');
       $('ptt-label').textContent = 'Отправка...';
@@ -790,33 +811,34 @@
   });
 
   async function uploadVoiceMessage(blob) {
-    toast('Обработка аудио...', 'ok');
+    toast('Загрузка на сервер...', 'ok');
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64Audio = reader.result;
-        
-        // Разбиваем длинную строку на кусочки по 8000 символов
-        const chunkSize = 8000;
-        const chunks = [];
-        for (let i = 0; i < base64Audio.length; i += chunkSize) {
-          chunks.push(base64Audio.substring(i, i + chunkSize));
-        }
-        
-        // Отправляем в базу данных массив кусочков
+      // Бесплатный файлообменник (file.io), который отдает короткую ссылку
+      const formData = new FormData();
+      formData.append('file', blob, 'voice.webm');
+
+      const response = await fetch('https://file.io', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
         await push(ref(db, 'radio_messages'), {
           type: 'voice',
-          chunks: chunks,
+          url: data.link,
           author: currentJudgeName || 'Судья',
           time: Date.now(),
           timeStr: getTimeNow()
         });
         toast('Отправлено!', 'ok');
-      };
+      } else {
+        toast('Ошибка сервера!', 'err');
+      }
     } catch(e) {
       console.error(e);
-      toast('Ошибка!', 'err');
+      toast('Ошибка загрузки аудио!', 'err');
     }
   }
 
@@ -980,7 +1002,7 @@
       `;
       box.appendChild(div);
       
-      renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx);
+      renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx, r.laps || {});
       renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties, true);
     });
     updateConnectionStatus(navigator.onLine);
@@ -1114,7 +1136,7 @@
         state = { id, fio: data.fio, team: data.team, stageIdx: data.stageIdx };
         $('race-name').textContent = data.fio;
         $('race-meta').textContent = data.team;
-        buildParticipantStageMap(); 
+        buildParticipantStageMap(data.laps || {}); 
         renderStage();
         startLocalTimer();
       }
@@ -1133,7 +1155,7 @@
         if (state.stageIdx >= STAGES.length) {
           toast('Вы на финише!', 'ok');
         } else {
-          buildParticipantStageMap(); 
+          buildParticipantStageMap(data.laps || {}); 
           renderStage();
           toast('✅ Этап засчитан!', 'ok');
           if(navigator.vibrate) navigator.vibrate([50, 100, 50]);
@@ -1142,8 +1164,8 @@
     });
   }
 
-  function buildParticipantStageMap() {
-    renderStagesMap($('participant-stages-map'), state.stageIdx);
+  function buildParticipantStageMap(laps) {
+    renderStagesMap($('participant-stages-map'), state.stageIdx, laps);
   }
 
   function startLocalTimer() {
@@ -1354,7 +1376,7 @@
       `;
       box.appendChild(div);
 
-      renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx);
+      renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx, r.laps || {});
       renderPenalties(document.getElementById(`j-pen-${r.id}`), r.penalties, false);
     });
     updateConnectionStatus(navigator.onLine);
@@ -1364,7 +1386,17 @@
     const st = STAGES[stageIdx];
     if(!confirm(`Засчитать этап "${st.short}"?`)) return;
     try {
-      await set(ref(db, 'races/' + participantId + '/stageIdx'), stageIdx + 1);
+      // Берем текущее время раунда для сохранения
+      const snap = await new Promise(res => onValue(ref(db, 'races/' + participantId), res, { onlyOnce: true }));
+      const data = snap.val();
+      const lapTimeMs = calcMs(data.startAt, data.pausedTotal, data.pauseStartedAt);
+      
+      // Сохраняем в laps (время, за которое прошел участник)
+      await update(ref(db, 'races/' + participantId), {
+        [`laps/${stageIdx}`]: lapTimeMs,
+        stageIdx: stageIdx + 1
+      });
+      
       toast(`✅ Этап "${st.short}" засчитан!`, 'ok');
       if(navigator.vibrate) navigator.vibrate(100);
     } catch(e) { toast('Ошибка!', 'err'); }
@@ -1445,13 +1477,27 @@
 
     finished.sort((a,b) => a.totalMs - b.totalMs);
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "Место;ФИО;Команда;Штраф (сек);Итоговое время\n";
+    
+    // Заголовок таблицы с этапами
+    let header = "Место;ФИО;Команда;Штраф (сек);Итоговое время";
+    STAGES.forEach(st => { header += `;${st.short}`; });
+    header += "\n";
+    csvContent += header;
 
     finished.forEach((r, i) => {
       let penSum = 0;
       if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
       const timeStr = fmtShort(r.totalMs);
-      csvContent += `${i+1};${r.fio};${r.team};${penSum};${timeStr}\n`;
+      
+      let row = `${i+1};${r.fio};${r.team};${penSum};${timeStr}`;
+      
+      // Добавляем время каждого этапа
+      STAGES.forEach((st, idx) => {
+        const lapMs = r.laps ? r.laps[idx] : null;
+        row += `;${lapMs ? fmtLap(lapMs) : '-'}`;
+      });
+      row += "\n";
+      csvContent += row;
     });
 
     const encodedUri = encodeURI(csvContent);
