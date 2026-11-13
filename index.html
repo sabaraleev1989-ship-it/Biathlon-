@@ -446,6 +446,21 @@
   </div>
 </div>
 
+<!-- МОДАЛЬНОЕ ОКНО ВВОДА ПОЗЫВНОГО -->
+<div class="modal-overlay" id="nickname-modal">
+  <div class="modal-box">
+    <div class="modal-title">Позывной</div>
+    <p class="muted" style="margin-bottom:10px;text-align:center">
+      Представьтесь, чтобы в чате было видно, кто вы
+    </p>
+    <input id="nickname-input" placeholder="Ваш позывной или имя" maxlength="24" />
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeNicknameModal()">Отмена</button>
+      <button class="btn primary" onclick="confirmNickname()">Войти в чат</button>
+    </div>
+  </div>
+</div>
+
 <!-- МОДАЛЬНОЕ ОКНО ЧАТА СУДЕЙ -->
 <div class="radio-modal" id="radio-modal">
   <div class="radio-window">
@@ -515,11 +530,9 @@
     <div class="vk-chat-footer" onclick="window.open('https://vk.me/join/OkKHi03Lsxk2Npk9kd60tVlrprDeznGXo00=', '_blank')">
       <div class="vk-chat-content">
         <div class="vk-chat-title">
-          <!-- Иконка VK -->
           <svg viewBox="0 0 24 24"><path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.576-1.496c.588-.19 1.341 1.26 2.14 1.817.605.42 1.064.328 1.064.328l2.137-.03s1.117-.07.587-.953c-.043-.072-.308-.66-1.583-1.866-1.333-1.26-1.154-1.056.451-3.234.978-1.325 1.369-2.134 1.246-2.48-.116-.33-.84-.242-.84-.242l-2.403.015s-.178-.024-.31.056c-.13.078-.213.262-.213.262s-.38 1.024-.887 1.896c-1.07 1.84-1.5 1.938-1.675 1.824-.407-.267-.305-1.075-.305-1.65 0-1.795.267-2.543-.52-2.737-.262-.064-.454-.106-1.12-.113-.856-.009-1.58.003-1.99.208-.273.137-.483.443-.355.46.158.023.516.098.706.36.245.338.237 1.097.237 1.097s.14 2.111-.33 2.372c-.324.18-.767-.187-1.718-1.87-.488-.854-.855-1.798-.855-1.798s-.07-.175-.198-.27c-.153-.114-.368-.15-.368-.15L2.49 7.23s-.36.01-.493.17c-.118.142-.01.436-.01.436s1.89 4.456 4.03 6.704c1.96 2.06 4.19 1.924 4.19 1.924h1.01z"/></svg>
           ЧАТ СОЧИ ПУЛЬС
         </div>
-        <!-- Анимация пульса -->
         <div class="vk-pulse-line">
           <svg viewBox="0 0 300 20" preserveAspectRatio="none">
             <path class="vk-pulse-path" d="M 0,10 L 50,10 L 60,10 L 65,2 L 75,18 L 85,10 L 140,10 L 150,10 L 155,2 L 165,18 L 175,10 L 230,10 L 240,10 L 245,5 L 250,15 L 260,10 L 300,10" />
@@ -799,6 +812,17 @@
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
 
+  // Экранирование HTML (защита от XSS)
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function updateConnectionStatus(isOnline) {
     const dots = document.querySelectorAll('.connection');
     if (dots.length === 0) return;
@@ -816,7 +840,7 @@
     } catch(e) {}
   }
   function releaseWakeLock() {
-    try { wakeLock && wakeLock.release(); } catch(e){}
+    try { wakeLock && wakeLock.release(); wakeLock = null; } catch(e){}
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
@@ -826,7 +850,11 @@
   function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null, penalties = {}) {
     if (!container) return;
     
-    if (container._timerRAF) cancelAnimationFrame(container._timerRAF);
+    // Всегда отменяем старый RAF перед запуском
+    if (container._timerRAF) {
+      cancelAnimationFrame(container._timerRAF);
+      container._timerRAF = null;
+    }
 
     const draw = () => {
       let html = '';
@@ -835,7 +863,6 @@
         let stIco = '';
         let lapTimeStr = '';
         
-        // Считаем штрафы именно для этого этапа
         let stagePenaltySum = 0;
         Object.values(penalties).forEach(p => {
           if (p.stageIdx === i) stagePenaltySum += p.sec;
@@ -877,24 +904,26 @@
     draw();
   }
 
-  function renderPenalties(container, penaltiesObj, canDelete = false) {
+  function renderPenalties(container, penaltiesObj, canDelete = false, participantId = null) {
     if (!container) return;
     if (!penaltiesObj) { container.innerHTML = '<div class="muted" style="text-align:center; font-size:10px;">Штрафов нет</div>'; return; }
     
     let html = '';
     Object.entries(penaltiesObj).forEach(([key, p]) => {
-      const delBtn = canDelete ? `<button class="del-btn" onclick="deletePenalty('${event.target.closest('.judge-item').dataset.id}', '${key}')">✕</button>` : '';
+      const delBtn = canDelete && participantId 
+        ? `<button class="del-btn" onclick="deletePenalty('${participantId}', '${key}')">✕</button>` 
+        : '';
       const stageName = STAGES[p.stageIdx] ? STAGES[p.stageIdx].short : 'Общий';
       
       html += `
         <div class="penalty-item">
           <div>
-            <span class="reason">+${p.sec}с</span> · ${p.reason} <br>
-            <span style="font-size:10px;color:var(--dim)">Этап: ${stageName}</span><br>
-            <span class="judge">${p.judgeName}</span>
+            <span class="reason">+${escapeHtml(p.sec)}с</span> · ${escapeHtml(p.reason)} <br>
+            <span style="font-size:10px;color:var(--dim)">Этап: ${escapeHtml(stageName)}</span><br>
+            <span class="judge">${escapeHtml(p.judgeName)}</span>
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
-            <div class="time">${p.timeStr}</div>
+            <div class="time">${escapeHtml(p.timeStr)}</div>
             ${delBtn}
           </div>
         </div>
@@ -935,7 +964,6 @@
     }
   }
 
-  // Настройки (Только для Главного судьи)
   window.openSettingsModal = function() {
     onValue(ref(db, 'settings/judge_password'), (snap) => {
       const pwd = snap.val() || 'judge2026';
@@ -965,7 +993,6 @@
      5. ЧАТЫ (СУДЕЙСКИЙ И ОБЩИЙ)
      ============================================================ */
   
-  // --- Инициализация панелей эмодзи ---
   function initEmojiPanels() {
     const panelJudge = $('emoji-panel-judge');
     const panelGeneral = $('emoji-panel-general');
@@ -1025,7 +1052,6 @@
     if (!messages.length) {
       chat.innerHTML = '<div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>';
     } else {
-      // Модераторы: Главный судья и обычные судьи
       const isModerator = sessionStorage.getItem('mj_auth') === 'true' || sessionStorage.getItem('judge_name') !== null;
       
       messages.forEach(([id, m]) => {
@@ -1036,9 +1062,9 @@
         chat.innerHTML += `
           <div class="msg">
             <div class="msg-text">
-              <span class="author">${m.author}</span>
-              <div>${m.text}</div>
-              <div class="time-txt">${m.timeStr}</div>
+              <span class="author">${escapeHtml(m.author)}</span>
+              <div>${escapeHtml(m.text)}</div>
+              <div class="time-txt">${escapeHtml(m.timeStr)}</div>
             </div>
             ${delHtml}
           </div>
@@ -1052,30 +1078,57 @@
     }
   }
 
-  window.sendTextMsg = async function(type) {
-    const inputId = type === 'judge' ? 'radio-text-input' : 'general-text-input';
-    const text = $(inputId).value.trim();
-    if (!text) return;
-    $(inputId).value = '';
-    
-    // Скрываем панель эмодзи при отправке
-    $('emoji-panel-judge').classList.remove('on');
-    $('emoji-panel-general').classList.remove('on');
-
-    const dbPath = type === 'judge' ? 'radio_messages' : 'general_messages';
-
-    try {
-      await push(ref(db, dbPath), {
-        text: text,
-        author: currentJudgeName || 'Участник', // Если судья - его имя, если участник - "Участник"
-        time: Date.now(),
-        timeStr: getTimeNow()
-      });
-    } catch(e) { toast('Ошибка отправки', 'err'); }
+  /* ============================================================
+     Позывной участника для общего чата
+     ============================================================ */
+  function getParticipantNickname() {
+    return sessionStorage.getItem('participant_nick') || '';
+  }
+  function setParticipantNickname(nick) {
+    sessionStorage.setItem('participant_nick', nick);
   }
 
-  // --- Логика ОБЩЕГО чата ---
+  window.openNicknameModal = function() {
+    $('nickname-input').value = getParticipantNickname();
+    $('nickname-modal').classList.add('on');
+    setTimeout(() => $('nickname-input').focus(), 150);
+  }
+  window.closeNicknameModal = function() {
+    $('nickname-modal').classList.remove('on');
+  }
+  window.confirmNickname = function() {
+    const nick = $('nickname-input').value.trim();
+    if (!nick) { toast('Введите позывной', 'err'); return; }
+    setParticipantNickname(nick);
+    closeNicknameModal();
+    openGeneralChatNow();
+  }
+
+  function getAuthorLabel() {
+    if (sessionStorage.getItem('mj_auth') === 'true') {
+      const name = sessionStorage.getItem('mj_name') || 'Главный судья';
+      return `Главный судья (${name}) 🎖️`;
+    }
+    if (sessionStorage.getItem('judge_name')) {
+      const name = sessionStorage.getItem('judge_name');
+      return `Судья (${name}) 🏅`;
+    }
+    const nick = getParticipantNickname();
+    return nick || 'Участник';
+  }
+
   window.toggleGeneralChat = function() {
+    const isJudge = sessionStorage.getItem('mj_auth') === 'true' 
+                    || sessionStorage.getItem('judge_name') !== null;
+    
+    if (!isJudge && !getParticipantNickname()) {
+      openNicknameModal();
+      return;
+    }
+    openGeneralChatNow();
+  }
+
+  function openGeneralChatNow() {
     isGeneralOpen = !isGeneralOpen;
     $('general-modal').classList.toggle('on', isGeneralOpen);
     $('emoji-panel-general').classList.remove('on');
@@ -1116,9 +1169,9 @@
         chat.innerHTML += `
           <div class="msg">
             <div class="msg-text">
-              <span class="author">${m.author}</span>
-              <div>${m.text}</div>
-              <div class="time-txt">${m.timeStr}</div>
+              <span class="author">${escapeHtml(m.author)}</span>
+              <div>${escapeHtml(m.text)}</div>
+              <div class="time-txt">${escapeHtml(m.timeStr)}</div>
             </div>
             ${delHtml}
           </div>
@@ -1133,13 +1186,33 @@
     setTimeout(() => chat.scrollTop = chat.scrollHeight, 100);
   }
 
-  // Удаление сообщений (для модераторов)
   window.deleteChatMessage = async function(dbPath, id) {
     if(!confirm('Удалить это сообщение?')) return;
     try {
       await remove(ref(db, dbPath + '/' + id));
       toast('Сообщение удалено', 'ok');
     } catch(e) { toast('Ошибка удаления', 'err'); }
+  }
+
+  window.sendTextMsg = async function(type) {
+    const inputId = type === 'judge' ? 'radio-text-input' : 'general-text-input';
+    const text = $(inputId).value.trim();
+    if (!text) return;
+    $(inputId).value = '';
+    
+    $('emoji-panel-judge').classList.remove('on');
+    $('emoji-panel-general').classList.remove('on');
+
+    const dbPath = type === 'judge' ? 'radio_messages' : 'general_messages';
+
+    try {
+      await push(ref(db, dbPath), {
+        text: text,
+        author: getAuthorLabel(),
+        time: Date.now(),
+        timeStr: getTimeNow()
+      });
+    } catch(e) { toast('Ошибка отправки', 'err'); }
   }
 
   /* ============================================================
@@ -1173,6 +1246,9 @@
     toast('Вы вышли');
     show('scr-role');
     $('radio-fab').style.display = 'none';
+    isGeneralOpen = false;
+    $('general-modal').classList.remove('on');
+    releaseWakeLock();
   }
 
   window.openMainJudge = function() {
@@ -1202,10 +1278,10 @@
         div.className = 'judge-item';
         div.innerHTML = `
           <div class="info" style="flex:1">
-            <div class="name">${r.fio}</div>
-            <div class="meta">${r.team}</div>
+            <div class="name">${escapeHtml(r.fio)}</div>
+            <div class="meta">${escapeHtml(r.team)}</div>
           </div>
-          <button class="btn-mini act-green" onclick="startFromPreReg('${id}', '${r.fio}', '${r.team}')">НА СТАРТ</button>
+          <button class="btn-mini act-green" onclick="startFromPreReg('${id}', '${escapeHtml(r.fio).replace(/'/g, "\\'")}', '${escapeHtml(r.team).replace(/'/g, "\\'")}')">НА СТАРТ</button>
         `;
         box.appendChild(div);
       });
@@ -1318,8 +1394,8 @@
         <div class="connection" id="conn-${r.id}"></div>
         <div class="judge-top">
           <div class="info">
-            <div class="name">${r.fio}</div>
-            <div class="meta">${r.team}</div>
+            <div class="name">${escapeHtml(r.fio)}</div>
+            <div class="meta">${escapeHtml(r.team)}</div>
           </div>
           <div style="text-align:right">
             <div class="time" 
@@ -1349,7 +1425,7 @@
       box.appendChild(div);
       
       renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx, r.laps || {}, isPaused ? null : r.stageStartedAt, r.penalties);
-      renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties, true);
+      renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties, true, r.id);
     });
     updateConnectionStatus(navigator.onLine);
   }
@@ -1470,8 +1546,8 @@
         div.className = 'judge-item';
         div.innerHTML = `
           <div class="info">
-            <div class="name">${r.fio}</div>
-            <div class="meta">${r.team} · <span style="color:${statusColor}">${statusText}</span></div>
+            <div class="name">${escapeHtml(r.fio)}</div>
+            <div class="meta">${escapeHtml(r.team)} · <span style="color:${statusColor}">${statusText}</span></div>
           </div>
           <button class="btn-mini act" onclick="showParticipantResults('${r.id}')">👁 ОТКРЫТЬ</button>
         `;
@@ -1558,6 +1634,9 @@
     show('scr-role');
     $('radio-fab').style.display = 'none';
     judgeStage = null;
+    isGeneralOpen = false;
+    $('general-modal').classList.remove('on');
+    releaseWakeLock();
   }
 
   window.openJudgeMode = function(forceSelect = false) {
@@ -1663,8 +1742,8 @@
         <div class="connection" id="conn-j-${r.id}"></div>
         <div class="judge-top">
           <div class="info">
-            <div class="name">${r.fio}</div>
-            <div class="meta">${r.team} · Сейчас: ${STAGES[r.stageIdx] ? STAGES[r.stageIdx].short : 'Финиш'}</div>
+            <div class="name">${escapeHtml(r.fio)}</div>
+            <div class="meta">${escapeHtml(r.team)} · Сейчас: ${STAGES[r.stageIdx] ? STAGES[r.stageIdx].short : 'Финиш'}</div>
           </div>
           <div style="text-align:right">
             <div class="time" 
@@ -1727,21 +1806,23 @@
     
     box.innerHTML = `<button class="filter-btn ${currentFilter === 'all' ? 'on' : ''}" onclick="filterResults('all')">Все</button>`;
     teams.forEach(t => {
-      box.innerHTML += `<button class="filter-btn ${currentFilter === t ? 'on' : ''}" onclick="filterResults('${t}')">${t}</button>`;
+      box.innerHTML += `<button class="filter-btn ${currentFilter === t ? 'on' : ''}" onclick="filterResults('${t.replace(/'/g, "\\'")}')">${escapeHtml(t)}</button>`;
     });
   }
 
   window.filterResults = function(team) {
     currentFilter = team;
     const snap = window.lastRacesSnap;
-    if (!snap) return;
+    if (!snap) {
+      toast('Данные ещё не загружены', 'err');
+      return;
+    }
     const data = snap.val() || {};
     const finished = Object.values(data).filter(r => r.status === 'finished');
     renderResultsTable(finished);
     renderFilters(finished);
   }
 
-  // Отрисовка таблицы с разбивкой по этапам
   function renderResultsTable(finished) {
     const box = $('tables');
     let filtered = finished;
@@ -1769,19 +1850,18 @@
       
       html += `<tr>
         <td>${m}</td>
-        <td class="nm">${r.fio}<br><small style="color:var(--dim);font-family:var(--sans)">${r.team}</small></td>
+        <td class="nm">${escapeHtml(r.fio)}<br><small style="color:var(--dim);font-family:var(--sans)">${escapeHtml(r.team)}</small></td>
         <td><b>${fmtShort(r.totalMs)}</b></td>`;
         
       STAGES.forEach((st, idx) => {
         const lapMs = r.laps ? r.laps[idx] : null;
         let cellText = lapMs ? fmtLap(lapMs) : '-';
         
-        // Собираем штрафы для этого этапа
         let pensForStage = [];
         if (r.penalties) {
           Object.values(r.penalties).forEach(p => {
             if (p.stageIdx === idx) {
-              pensForStage.push(`+${p.sec}с (${p.reason} - ${p.judgeName})`);
+              pensForStage.push(`+${p.sec}с (${escapeHtml(p.reason)} - ${escapeHtml(p.judgeName)})`);
             }
           });
         }
@@ -1825,7 +1905,7 @@
 
     finished.sort((a,b) => a.totalMs - b.totalMs);
     
-    let csvContent = "\uFEFF"; // BOM для Excel
+    let csvContent = "\uFEFF";
     let header = "Место;ФИО;Команда;Итоговое время";
     STAGES.forEach(st => { header += `;${st.short}`; });
     header += "\n";
@@ -1834,7 +1914,7 @@
     finished.forEach((r, i) => {
       const timeStr = fmtShort(r.totalMs);
       
-      let row = `${i+1};${r.fio};${r.team};${timeStr}`;
+      let row = `${i+1};"${r.fio}";"${r.team}";${timeStr}`;
       
       STAGES.forEach((st, idx) => {
         const lapMs = r.laps ? r.laps[idx] : null;
@@ -1853,7 +1933,7 @@
           cellText += ` [${pensForStage.join(', ')}]`;
         }
         
-        row += `;${cellText}`;
+        row += `;"${cellText}"`;
       });
       row += "\n";
       csvContent += row;
