@@ -98,7 +98,6 @@
     overflow: hidden;
     isolation: isolate;
   }
-  /* Статичный блик (без анимации — не греет) */
   .btn.lime-glass::before {
     content: "";
     position: absolute;
@@ -165,6 +164,75 @@
   .connection { position: absolute; top: 10px; left: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green-glow); z-index: 10; }
   .connection.offline { background: var(--red); box-shadow: 0 0 6px var(--red-glow); animation: blink 1s infinite; }
 
+  /* ============ КОМПАКТНЫЙ СПИСОК ПРЕДЗАПИСЕЙ ============ */
+  .prereg-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0c0505;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    transition: .2s;
+  }
+  .prereg-row:last-child { margin-bottom: 0; }
+  
+  .prereg-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #2a0e0e, #1a0707);
+    border: 1px solid var(--line2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--red);
+    text-shadow: 0 0 6px var(--red-glow);
+  }
+  
+  .prereg-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .prereg-info .name {
+    font-weight: 800;
+    font-size: 13.5px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .prereg-info .team {
+    font-size: 10.5px;
+    color: var(--dim);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .prereg-start-btn {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: linear-gradient(180deg, #4ade80, #22c55e);
+    color: #000;
+    font-weight: 900;
+    font-size: 12px;
+    letter-spacing: .5px;
+    cursor: pointer;
+    transition: .15s;
+    white-space: nowrap;
+  }
+  .prereg-start-btn:active { transform: scale(.95); }
+  .prereg-start-btn:disabled { opacity: .4; pointer-events: none; }
+
   /* История штрафов */
   .penalty-list { background: #120707; border: 1px solid var(--line2); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
   .penalty-item { font-size: 11px; color: var(--txt); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding: 5px 0; }
@@ -198,7 +266,6 @@
   .btn-mini:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);}
 
   /* ============ ЧАТЫ ============ */
-  /* Модалка чата */
   .radio-modal {
     position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85);
     backdrop-filter: blur(5px); display: none; flex-direction: column;
@@ -217,7 +284,6 @@
   .radio-title { font-weight: 900; color: var(--red); letter-spacing: 1px; text-transform: uppercase; font-size: 12px; }
   .radio-close { background: none; border: none; color: var(--txt); font-size: 20px; cursor: pointer; }
   
-  /* Индикатор "печатает..." */
   .typing-indicator {
     padding: 6px 16px;
     font-size: 11px;
@@ -264,7 +330,6 @@
   .msg .author.role-judge { color: var(--gold); font-weight: 800; text-shadow: 0 0 6px rgba(255,207,63,.4); }
   .msg .time-txt { font-size: 9px; color: var(--dim); text-align: right; margin-top: 4px; }
   
-  /* Кнопка удаления сообщения (только для модераторов) */
   .del-msg-btn {
     background: transparent; border: none; color: #555; font-size: 16px; cursor: pointer; 
     display: flex; align-items: flex-start; padding: 0;
@@ -885,13 +950,21 @@
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
   });
 
-  // Показ/скрытие кнопки "Чат судей" на главном экране
   function updateJudgeChatBtn() {
     const btn = $('judge-chat-btn');
     if (!btn) return;
     const isMJ = localStorage.getItem('mj_auth') === 'true';
     const isJudge = !!localStorage.getItem('judge_name');
     btn.style.display = (isMJ || isJudge) ? 'flex' : 'none';
+  }
+
+  // Автоприсвоение порядкового номера
+  async function getNextRegNum() {
+    const snap = await new Promise(res => onValue(ref(db, 'settings/last_reg_num'), res, { onlyOnce: true }));
+    let last = snap.val() || 0;
+    let next = last + 1;
+    await set(ref(db, 'settings/last_reg_num'), next);
+    return next;
   }
 
   function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null, penalties = {}) {
@@ -993,9 +1066,11 @@
     if(!fio || !team) { toast('Заполните ФИО и команду', 'err'); return; }
 
     try {
+      const regNum = await getNextRegNum();
       const newRef = push(ref(db, 'pre_registrations'));
       await set(newRef, {
         fio, team,
+        regNum,
         time: Date.now(),
         status: 'pending'
       });
@@ -1003,7 +1078,7 @@
       $('reg-fio').value = '';
       $('reg-team').value = '';
       
-      toast('Заявка принята!', 'ok');
+      toast(`Заявка принята! Номер: ${regNum}`, 'ok');
       show('scr-role');
     } catch(e) {
       toast('Ошибка отправки', 'err');
@@ -1375,7 +1450,7 @@
   function listenPreRegistrations() {
     onValue(ref(db, 'pre_registrations'), (snap) => {
       const data = snap.val() || {};
-      const list = Object.entries(data).sort((a,b) => a[1].time - b[1].time);
+      const list = Object.entries(data).sort((a,b) => (a[1].regNum || 9999) - (b[1].regNum || 9999));
       const box = $('pre-reg-list');
       
       if (!list.length) { box.innerHTML = '<p class="muted">Пока нет заявок.</p>'; return; }
@@ -1384,26 +1459,34 @@
       
       list.forEach(([id, r]) => {
         const div = document.createElement('div');
-        div.className = 'judge-item';
+        div.className = 'prereg-row';
         div.innerHTML = `
-          <div class="info" style="flex:1">
+          <div class="prereg-num">${r.regNum || '—'}</div>
+          <div class="prereg-info">
             <div class="name">${escapeHtml(r.fio)}</div>
-            <div class="meta">${escapeHtml(r.team)}</div>
+            <div class="team">${escapeHtml(r.team)}</div>
           </div>
-          <button class="btn-mini act-green" onclick="startFromPreReg('${id}', '${escapeHtml(r.fio).replace(/'/g, "\\'")}', '${escapeHtml(r.team).replace(/'/g, "\\'")}')">НА СТАРТ</button>
+          <button class="prereg-start-btn" onclick="startFromPreReg('${id}')">НА СТАРТ</button>
         `;
         box.appendChild(div);
       });
     });
   }
 
-  window.startFromPreReg = async function(id, fio, team) {
+  window.startFromPreReg = async function(id) {
     try {
+      const snap = await new Promise(res => onValue(ref(db, 'pre_registrations/' + id), res, { onlyOnce: true }));
+      const data = snap.val();
+      if (!data) { toast('Заявка не найдена', 'err'); return; }
+      
       await remove(ref(db, 'pre_registrations/' + id));
       
       const raceId = 'user_' + Date.now();
       await set(ref(db, 'races/' + raceId), {
-        id: raceId, fio, team,
+        id: raceId, 
+        fio: data.fio, 
+        team: data.team,
+        regNum: data.regNum || null,
         startAt: Date.now(),
         pausedTotal: 0,
         pauseStartedAt: null,
@@ -1412,7 +1495,7 @@
         status: 'running'
       });
       
-      toast('Участник запущен!', 'ok');
+      toast(`№${data.regNum || ''} ${data.fio} — на старт!`, 'ok');
     } catch(e) { toast('Ошибка', 'err'); }
   }
 
@@ -1430,10 +1513,12 @@
       return;
     }
 
-    const id = 'user_' + Date.now();
     try {
+      const regNum = await getNextRegNum();
+      const id = 'user_' + Date.now();
       await set(ref(db, 'races/' + id), {
         id, fio, team,
+        regNum,
         startAt: Date.now(),
         pausedTotal: 0,
         pauseStartedAt: null,
@@ -1443,7 +1528,7 @@
       });
       $('m-fio').value = '';
       $('m-team').value = '';
-      toast('Участник на дистанции!', 'ok');
+      toast(`Участник №${regNum} на дистанции!`, 'ok');
     } catch(e) { toast('Ошибка сети!', 'err'); }
   }
 
@@ -1502,7 +1587,7 @@
         <div class="connection" id="conn-${r.id}"></div>
         <div class="judge-top">
           <div class="info">
-            <div class="name">${escapeHtml(r.fio)}</div>
+            <div class="name">${r.regNum ? '№'+r.regNum+' · ' : ''}${escapeHtml(r.fio)}</div>
             <div class="meta">${escapeHtml(r.team)}</div>
           </div>
           <div style="text-align:right">
@@ -1529,6 +1614,9 @@
           <button class="btn-mini act-yellow" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
           <button class="btn-mini ghost" onclick="finishParticipant('${r.id}')">🏁 ФИНИШ</button>
         </div>
+        <div class="judge-actions" style="margin-top:6px;">
+          <button class="btn-mini ghost" onclick="cancelStart('${r.id}')" style="border-color:#c41a1a;color:#ff6b6b;">↩️ СБРОСИТЬ СТАРТ</button>
+        </div>
       `;
       box.appendChild(div);
       
@@ -1536,6 +1624,30 @@
       renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties, true, r.id);
     });
     updateConnectionStatus(navigator.onLine);
+  }
+
+  // Сброс старта (возврат в предзаписи)
+  window.cancelStart = async function(id) {
+    if(!confirm('Отменить старт? Участник вернётся в предзаписи с тем же номером.')) return;
+    try {
+      const snap = await new Promise(res => onValue(ref(db, 'races/' + id), res, { onlyOnce: true }));
+      const data = snap.val();
+      if (!data) return;
+      
+      if (data.regNum) {
+        const newRef = push(ref(db, 'pre_registrations'));
+        await set(newRef, {
+          fio: data.fio,
+          team: data.team,
+          regNum: data.regNum,
+          time: Date.now(),
+          status: 'pending'
+        });
+      }
+      
+      await remove(ref(db, 'races/' + id));
+      toast('Старт отменён, участник возвращён', 'ok');
+    } catch(e) { toast('Ошибка отмены', 'err'); }
   }
 
   window.openPenaltyModal = function(id) {
@@ -1650,7 +1762,11 @@
   function listenParticipantList() {
     onValue(ref(db, 'races'), (snap) => {
       const data = snap.val() || {};
-      const activeAndFinished = Object.values(data).sort((a,b) => a.startAt - b.startAt);
+      const activeAndFinished = Object.values(data).sort((a,b) => {
+        const na = a.regNum || 9999, nb = b.regNum || 9999;
+        if (na !== nb) return na - nb;
+        return a.startAt - b.startAt;
+      });
       const box = $('participant-list');
       
       if (!activeAndFinished.length) { box.innerHTML = '<p class="muted">Пока нет участников.</p>'; return; }
@@ -1664,7 +1780,7 @@
         div.className = 'judge-item';
         div.innerHTML = `
           <div class="info">
-            <div class="name">${escapeHtml(r.fio)}</div>
+            <div class="name">${r.regNum ? '№'+r.regNum+' · ' : ''}${escapeHtml(r.fio)}</div>
             <div class="meta">${escapeHtml(r.team)} · <span style="color:${statusColor}">${statusText}</span></div>
           </div>
           <button class="btn-mini act" onclick="showParticipantResults('${r.id}')">👁 ОТКРЫТЬ</button>
@@ -1681,7 +1797,7 @@
       const data = snap.val();
       if(!data) return;
       
-      $('pr-name').textContent = data.fio;
+      $('pr-name').textContent = (data.regNum ? '№'+data.regNum+' · ' : '') + data.fio;
       $('pr-team').textContent = data.team;
       
       let totalPenalty = 0;
@@ -1857,7 +1973,7 @@
         <div class="connection" id="conn-j-${r.id}"></div>
         <div class="judge-top">
           <div class="info">
-            <div class="name">${escapeHtml(r.fio)}</div>
+            <div class="name">${r.regNum ? '№'+r.regNum+' · ' : ''}${escapeHtml(r.fio)}</div>
             <div class="meta">${escapeHtml(r.team)} · Сейчас: ${STAGES[r.stageIdx] ? STAGES[r.stageIdx].short : 'Финиш'}</div>
           </div>
           <div style="text-align:right">
@@ -1951,6 +2067,7 @@
     
     let html = `<table><thead><tr>
       <th>#</th>
+      <th>№</th>
       <th>Участник</th>
       <th>Итог. время</th>`;
       
@@ -1965,6 +2082,7 @@
       
       html += `<tr>
         <td>${m}</td>
+        <td style="font-family:var(--mono);color:var(--gold);font-weight:bold;">${r.regNum || '—'}</td>
         <td class="nm">${escapeHtml(r.fio)}<br><small style="color:var(--dim);font-family:var(--sans)">${escapeHtml(r.team)}</small></td>
         <td><b>${fmtShort(r.totalMs)}</b></td>`;
         
@@ -2021,7 +2139,7 @@
     finished.sort((a,b) => a.totalMs - b.totalMs);
     
     let csvContent = "\uFEFF";
-    let header = "Место;ФИО;Команда;Итоговое время";
+    let header = "Место;№;ФИО;Команда;Итоговое время";
     STAGES.forEach(st => { header += `;${st.short}`; });
     header += "\n";
     csvContent += header;
@@ -2029,7 +2147,7 @@
     finished.forEach((r, i) => {
       const timeStr = fmtShort(r.totalMs);
       
-      let row = `${i+1};"${r.fio}";"${r.team}";${timeStr}`;
+      let row = `${i+1};${r.regNum || ''};"${r.fio}";"${r.team}";${timeStr}`;
       
       STAGES.forEach((st, idx) => {
         const lapMs = r.laps ? r.laps[idx] : null;
@@ -2073,6 +2191,7 @@
     try {
       await remove(ref(db, 'races'));
       await remove(ref(db, 'pre_registrations'));
+      await remove(ref(db, 'settings/last_reg_num'));
       toast('Все данные очищены', 'ok');
       if ($('scr-main-judge').classList.contains('on')) {
         $('main-judge-list').innerHTML = '<p class="muted">Нет активных забегов.</p>';
