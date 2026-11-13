@@ -120,7 +120,7 @@
   .btn-mini.ghost{background:#1a0d0d;border:1px solid var(--line2);color:var(--txt)}
   .btn-mini:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);}
 
-  /* ============ РАЦИЯ (FAB) ============ */
+  /* ============ ЧАТ (FAB) ============ */
   .radio-fab {
     position: fixed; bottom: 20px; right: 20px; z-index: 900;
     width: 64px; height: 64px; border-radius: 50%;
@@ -136,7 +136,7 @@
     display: none; animation: pulse 1s infinite;
   }
   
-  /* Модалка рации */
+  /* Модалка чата */
   .radio-modal {
     position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85);
     backdrop-filter: blur(5px); display: none; flex-direction: column;
@@ -156,39 +156,15 @@
   .radio-close { background: none; border: none; color: var(--txt); font-size: 20px; cursor: pointer; }
   
   .radio-chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-height: 200px; }
-  .msg { padding: 10px 12px; border-radius: 10px; font-size: 13px; max-width: 85%; }
-  .msg.voice { background: #1a0707; border: 1px solid var(--red-d); display: flex; flex-direction: column; gap: 8px; }
-  .msg.text { background: #1a1a1a; border: 1px solid #333; }
-  .msg .author { font-size: 10px; color: var(--dim); margin-bottom: 2px; display: block; font-weight: bold; }
+  .msg { padding: 10px 12px; border-radius: 10px; font-size: 13px; max-width: 85%; background: #1a1a1a; border: 1px solid #333; }
+  .msg .author { font-size: 10px; color: var(--blue); margin-bottom: 4px; display: block; font-weight: bold; }
+  .msg .time-txt { font-size: 9px; color: var(--dim); text-align: right; margin-top: 4px; }
   
-  .audio-player { width: 100%; height: 32px; margin-top: 4px; filter: invert(1) hue-rotate(180deg); border-radius: 4px; }
+  .radio-controls { padding: 16px; background: #120707; border-top: 1px solid var(--line2); display: flex; flex-direction: column; gap: 10px; }
   
-  .radio-controls { padding: 16px; background: #120707; border-top: 1px solid var(--line2); display: flex; flex-direction: column; gap: 10px; align-items: center; }
-  
-  .btn-ptt {
-    width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--red);
-    background: #1a0707; color: var(--red); font-size: 32px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: 0.2s; 
-    user-select: none; -webkit-user-select: none; touch-action: none;
-  }
-  
-  .btn-ptt.recording {
-    background: var(--red); color: #fff; transform: scale(1.05);
-    box-shadow: 0 0 30px var(--red-glow);
-    animation: pulse-recording 1.5s infinite;
-  }
-  @keyframes pulse-recording {
-    0% { box-shadow: 0 0 0 0 rgba(255, 45, 45, 0.7); }
-    70% { box-shadow: 0 0 0 20px rgba(255, 45, 45, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 45, 45, 0); }
-  }
-
-  .ptt-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-top: 4px; }
-  
-  .text-input-row { display: flex; width: 100%; gap: 8px; margin-top: 8px;}
-  .text-input-row input { flex: 1; padding: 10px; font-size: 14px; }
-  .text-input-row button { width: 50px; padding: 0; }
+  .text-input-row { display: flex; width: 100%; gap: 8px; }
+  .text-input-row input { flex: 1; padding: 12px; font-size: 14px; border-radius: 10px; }
+  .text-input-row button { width: 60px; padding: 0; border-radius: 10px; }
 
   /* ============ RESULTS ============ */
   .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; }
@@ -211,7 +187,7 @@
   .modal-title{font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;color:var(--red);}
   .modal-actions{display:flex;gap:10px;margin-top:16px;}
 
-  /* ============ SPLASH (НОВЫЙ ЭКРАН ЗАСТАВКИ С КАРТИНКОЙ) ============ */
+  /* ============ SPLASH (ОБНОВЛЕННЫЙ) ============ */
   #scr-splash {
     position: fixed; inset: 0; z-index: 100;
     background-color: #000;
@@ -229,45 +205,58 @@
     z-index: 1;
   }
   
-  /* Затемнение снизу для текста, если нужно */
   .splash-bg::after {
     content: ""; position: absolute; inset: 0;
-    background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 40%);
+    background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%);
   }
 
   .splash-content {
     position: relative; z-index: 2;
-    width: 100%; padding: 30px 20px 60px;
+    width: 100%; padding: 30px 20px 50px;
     text-align: center;
-    display: flex; flex-direction: column; gap: 12px;
+    display: flex; flex-direction: column; gap: 16px;
   }
 
   .splash-org {
-    font-size: 14px; letter-spacing: 2px; color: #fff; font-weight: 700;
+    font-size: 22px; letter-spacing: 1px; color: #fff; font-weight: 800;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
     animation: slideUp .8s cubic-bezier(.2,.9,.3,1) .3s both;
   }
-  .splash-org span { color: var(--red); text-shadow: 0 0 15px var(--red-glow); font-size: 18px; font-weight: 900; }
+  .splash-org span { color: var(--red); text-shadow: 0 0 20px var(--red-glow); font-size: 26px; font-weight: 900; }
 
   .splash-chat {
-    font-size: 12px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase;
+    font-size: 16px; letter-spacing: 2px; color: #ddd; text-transform: uppercase; font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
     animation: slideUp .8s cubic-bezier(.2,.9,.3,1) .6s both;
   }
 
-  .pulse-line-anim {
-    height: 40px; margin-top: 10px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 60' preserveAspectRatio='none'%3E%3Cpolyline points='0,30 40,30 55,30 65,10 78,50 90,30 120,30 140,30 155,8 168,52 180,30 220,30 240,30 255,14 268,46 280,30 320,30 360,30' fill='none' stroke='%23ff2d2d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-size: contain; background-repeat: no-repeat; background-position: center;
-    filter: drop-shadow(0 0 8px var(--red-glow));
-    animation: pulseLine 2s linear infinite;
+  /* Анимация пульса (прорисовка заново) */
+  .pulse-container {
+    height: 80px; width: 100%; margin-top: 10px; position: relative;
+    animation: slideUp .8s cubic-bezier(.2,.9,.3,1) .9s both;
   }
-  @keyframes pulseLine {
-    0% { opacity: 0.5; transform: scaleX(0.9); }
-    50% { opacity: 1; transform: scaleX(1.05); }
-    100% { opacity: 0.5; transform: scaleX(0.9); }
+  .pulse-svg {
+    width: 100%; height: 100%;
+    filter: drop-shadow(0 0 10px var(--red-glow));
+  }
+  .pulse-path {
+    fill: none;
+    stroke: var(--red);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 800;
+    stroke-dashoffset: 800;
+    animation: drawPulse 2.5s linear infinite;
+  }
+  @keyframes drawPulse {
+    0% { stroke-dashoffset: 800; opacity: 0.3; }
+    50% { stroke-dashoffset: 0; opacity: 1; }
+    100% { stroke-dashoffset: -800; opacity: 0.3; }
   }
 
   @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(30px); }
     to { opacity: 1; transform: translateY(0); }
   }
 </style>
@@ -278,9 +267,15 @@
 <section id="scr-splash">
   <div class="splash-bg"></div>
   <div class="splash-content">
-    <div class="pulse-line-anim"></div>
     <div class="splash-org">ОРГАНИЗАТОР: <span>СК СКОРПИОН</span></div>
     <div class="splash-chat">ЧАТ: СТРАЙКБОЛ СОЧИ ПУЛЬС</div>
+    
+    <!-- Увеличенный и анимированный пульс -->
+    <div class="pulse-container">
+      <svg class="pulse-svg" viewBox="0 0 400 80" preserveAspectRatio="none">
+        <path class="pulse-path" d="M 0,40 L 60,40 L 80,40 L 95,10 L 110,70 L 125,40 L 180,40 L 200,40 L 215,5 L 230,75 L 245,40 L 300,40 L 320,40 L 335,20 L 350,60 L 365,40 L 400,40" />
+      </svg>
+    </div>
   </div>
 </section>
 
@@ -312,23 +307,20 @@
   </div>
 </div>
 
-<!-- МОДАЛЬНОЕ ОКНО РАЦИИ -->
+<!-- МОДАЛЬНОЕ ОКНО ЧАТА -->
 <div class="radio-modal" id="radio-modal">
   <div class="radio-window">
     <div class="radio-header">
-      <div class="radio-title">📻 Рация судей</div>
+      <div class="radio-title">💬 Чат судей</div>
       <button class="radio-close" onclick="toggleRadio()">✕</button>
     </div>
     <div class="radio-chat" id="radio-chat">
       <div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>
     </div>
     <div class="radio-controls">
-      <div class="btn-ptt" id="btn-ptt">🎙</div>
-      <div class="ptt-label" id="ptt-label">Нажмите, чтобы начать запись</div>
-      
       <div class="text-input-row">
-        <input id="radio-text-input" placeholder="Текст..." onkeypress="if(event.key==='Enter') sendTextMsg()" />
-        <button class="btn primary" onclick="sendTextMsg()" style="padding:0;min-height:auto;border-radius:8px;">➤</button>
+        <input id="radio-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg()" />
+        <button class="btn primary" onclick="sendTextMsg()" style="padding:0;">➤</button>
       </div>
     </div>
   </div>
@@ -517,9 +509,9 @@
     </div>
   </section>
 
-  <!-- FAB РАЦИИ -->
+  <!-- FAB ЧАТА -->
   <div class="radio-fab" id="radio-fab" onclick="toggleRadio()" style="display:none;">
-    📻
+    💬
     <div class="badge-dot" id="radio-badge"></div>
   </div>
 
@@ -580,14 +572,9 @@
   let currentPenaltyTargetId = null;
   let currentFilter = 'all';
 
-  // Рация
-  let mediaRecorder = null;
-  let audioChunks = [];
-  let isRecording = false;
+  // Чат
   let lastMsgTime = 0;
   let isRadioOpen = false;
-  let mediaStream = null;
-  let beepCtx = null;
 
   /* ============================================================
      3. УТИЛИТЫ
@@ -617,26 +604,6 @@
   function getTimeNow() {
     const d = new Date();
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  }
-
-  function playBeep(freq, duration) {
-    try {
-      if (!beepCtx) beepCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (beepCtx.state === 'suspended') beepCtx.resume();
-      
-      const osc = beepCtx.createOscillator();
-      const gain = beepCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(beepCtx.destination);
-      
-      gain.gain.setValueAtTime(0.1, beepCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, beepCtx.currentTime + duration);
-      
-      osc.start();
-      osc.stop(beepCtx.currentTime + duration);
-    } catch(e) {}
   }
 
   function updateConnectionStatus(isOnline) {
@@ -764,33 +731,9 @@
   }
 
   /* ============================================================
-     5. РАЦИЯ
+     5. ЧАТ СУДЕЙ (ТЕКСТОВЫЙ)
      ============================================================ */
   
-  async function initMicrophone() {
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(mediaStream, { audioBitsPerSecond: 32000 });
-      
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        audioChunks = [];
-        await uploadVoiceMessage(audioBlob);
-        
-        if (mediaStream) {
-          mediaStream.getTracks().forEach(track => track.stop());
-          mediaStream = null;
-        }
-        mediaRecorder = null;
-      };
-      return true;
-    } catch (e) {
-      toast('Доступ к микрофону запрещен!', 'err');
-      return false;
-    }
-  }
-
   window.toggleRadio = function() {
     isRadioOpen = !isRadioOpen;
     $('radio-modal').classList.toggle('on', isRadioOpen);
@@ -824,24 +767,19 @@
     }
 
     chat.innerHTML = '';
-    messages.forEach(m => {
-      if (m.type === 'voice') {
+    if (!messages.length) {
+      chat.innerHTML = '<div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>';
+    } else {
+      messages.forEach(m => {
         chat.innerHTML += `
-          <div class="msg voice">
-            <span class="author">${m.author} [${m.timeStr}]</span>
-            <div>🎙 Голосовое сообщение:</div>
-            <audio class="audio-player" controls src="${m.url}"></audio>
-          </div>
-        `;
-      } else {
-        chat.innerHTML += `
-          <div class="msg text">
-            <span class="author">${m.author} [${m.timeStr}]</span>
+          <div class="msg">
+            <span class="author">${m.author}</span>
             <div>${m.text}</div>
+            <div class="time-txt">${m.timeStr}</div>
           </div>
         `;
-      }
-    });
+      });
+    }
     scrollChatToBottom();
 
     if (!isRadioOpen && messages.length > 0) {
@@ -856,78 +794,12 @@
 
     try {
       await push(ref(db, 'radio_messages'), {
-        type: 'text',
         text: text,
         author: currentJudgeName || 'Судья',
         time: Date.now(),
         timeStr: getTimeNow()
       });
     } catch(e) { toast('Ошибка отправки', 'err'); }
-  }
-
-  const btnPtt = $('btn-ptt');
-  
-  btnPtt.addEventListener('click', async (e) => {
-    e.preventDefault();
-    
-    if (!isRecording) {
-      playBeep(800, 0.1);
-      const ok = await initMicrophone();
-      if (!ok) return;
-      
-      isRecording = true;
-      audioChunks = [];
-      mediaRecorder.start();
-      
-      btnPtt.classList.add('recording');
-      $('ptt-label').textContent = 'ИДЕТ ЗАПИСЬ... (нажмите чтобы отправить)';
-      if(navigator.vibrate) navigator.vibrate(50);
-      
-    } else {
-      playBeep(600, 0.15);
-      isRecording = false;
-      btnPtt.classList.remove('recording');
-      $('ptt-label').textContent = 'Отправка...';
-      
-      mediaRecorder.stop();
-      
-      setTimeout(() => {
-        $('ptt-label').textContent = 'Нажмите, чтобы начать запись';
-      }, 1000);
-    }
-  });
-
-  async function uploadVoiceMessage(blob) {
-    toast('Загрузка на сервер...', 'ok');
-    try {
-      const formData = new FormData();
-      formData.append('file', blob, 'voice.webm');
-
-      const response = await fetch('https://tmpfiles.org/api/v1/upload', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const json = await response.json();
-      
-      if (json.data && json.data.url) {
-        const directUrl = json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-        
-        await push(ref(db, 'radio_messages'), {
-          type: 'voice',
-          url: directUrl,
-          author: currentJudgeName || 'Судья',
-          time: Date.now(),
-          timeStr: getTimeNow()
-        });
-        toast('Отправлено!', 'ok');
-      } else {
-        toast('Ошибка сервера!', 'err');
-      }
-    } catch(e) {
-      console.error(e);
-      toast('Ошибка загрузки аудио!', 'err');
-    }
   }
 
   /* ============================================================
@@ -943,7 +815,7 @@
     
     const pwd = prompt('Введите пароль Главного судьи:');
     if (pwd === 'scorp2015') {
-      const name = prompt('Введите ваше имя/позывной (для истории штрафов):');
+      const name = prompt('Введите ваше имя/позывной (для чата):');
       if (!name) return;
       sessionStorage.setItem('mj_auth', 'true');
       sessionStorage.setItem('mj_name', name);
