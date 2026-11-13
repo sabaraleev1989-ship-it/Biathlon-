@@ -48,6 +48,7 @@
   label{display:block;font-size:11px;color:var(--dim);margin:11px 0 5px;letter-spacing:1px;font-weight:700}
   input,select{width:100%;padding:13px 12px;border-radius:12px;border:1px solid var(--line);background:#0c0505;color:var(--txt);font-size:16px;outline:none;font-family:inherit;transition:.2s;}
   input:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(255,45,45,.12)}
+  select:disabled, input:disabled { opacity: 0.7; cursor: not-allowed; }
 
   .btn{width:100%;padding:16px;border-radius:14px;border:1px solid transparent;font-size:16px;font-weight:900;letter-spacing:.6px;cursor:pointer;font-family:inherit;transition:.18s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;}
   .btn:active{transform:scale(.98)}
@@ -80,15 +81,16 @@
   .judge-item.ready{border-color:var(--red);box-shadow:0 0 14px -4px var(--red-glow)}
   .judge-item.done{border-color:var(--green);opacity:.6}
   
-  .judge-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+  .judge-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px; margin-top: 4px;}
   .judge-top .info{flex:1}
   .judge-top .name{font-weight:800;font-size:16px}
   .judge-top .meta{font-size:11px;color:var(--dim);margin-top:2px}
   .judge-top .time{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--red); text-align:right; line-height: 1.2;}
   .judge-top .pen {font-size:11px; color:var(--red); font-weight:bold;}
 
-  .connection { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
-  .connection.offline { background: var(--red); box-shadow: 0 0 8px var(--red-glow); animation: blink 1s infinite; }
+  /* Индикатор связи - перенесен и уменьшен */
+  .connection { position: absolute; top: 10px; left: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green-glow); z-index: 10; }
+  .connection.offline { background: var(--red); box-shadow: 0 0 6px var(--red-glow); animation: blink 1s infinite; }
 
   /* История штрафов */
   .penalty-list { background: #120707; border: 1px solid var(--line2); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
@@ -162,19 +164,31 @@
   .msg .content { display: flex; align-items: center; gap: 8px; }
   
   .radio-controls { padding: 16px; background: #120707; border-top: 1px solid var(--line2); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  
+  /* Кнопка записи */
   .btn-ptt {
     width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--red);
     background: #1a0707; color: var(--red); font-size: 32px;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: 0.1s; user-select: none;
+    cursor: pointer; transition: 0.2s; 
+    user-select: none; -webkit-user-select: none; touch-action: none;
   }
-  .btn-ptt:active, .btn-ptt.recording {
-    background: var(--red); color: #fff; transform: scale(0.95);
-    box-shadow: 0 0 20px var(--red-glow);
-  }
-  .ptt-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
   
-  .text-input-row { display: flex; width: 100%; gap: 8px; }
+  /* Анимация записи */
+  .btn-ptt.recording {
+    background: var(--red); color: #fff; transform: scale(1.05);
+    box-shadow: 0 0 30px var(--red-glow);
+    animation: pulse-recording 1.5s infinite;
+  }
+  @keyframes pulse-recording {
+    0% { box-shadow: 0 0 0 0 rgba(255, 45, 45, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(255, 45, 45, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 45, 45, 0); }
+  }
+
+  .ptt-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-top: 4px; }
+  
+  .text-input-row { display: flex; width: 100%; gap: 8px; margin-top: 8px;}
   .text-input-row input { flex: 1; padding: 10px; font-size: 14px; }
   .text-input-row button { width: 50px; padding: 0; }
 
@@ -321,7 +335,7 @@
     </div>
     <div class="radio-controls">
       <div class="btn-ptt" id="btn-ptt">🎙</div>
-      <div class="ptt-label">Удерживай, чтобы говорить</div>
+      <div class="ptt-label" id="ptt-label">Нажмите, чтобы начать запись</div>
       
       <div class="text-input-row">
         <input id="radio-text-input" placeholder="Текст..." onkeypress="if(event.key==='Enter') sendTextMsg()" />
@@ -431,12 +445,14 @@
     </header>
     
     <div class="card">
-      <h2>Выберите ваш этап</h2>
+      <h2>Ваш этап</h2>
       <div style="height:10px"></div>
-      <label>Мой этап</label>
-      <select id="judge-stage-select" onchange="setJudgeStage()">
+      <label>Закрепленный этап</label>
+      <!-- Выбор этапа теперь заблокирован после выбора -->
+      <select id="judge-stage-select" onchange="setJudgeStage()" disabled>
         <option value="">-- Выберите этап --</option>
       </select>
+      <p class="muted" style="margin-top:8px;font-size:10px">Этап нельзя изменить. Если ошиблись, нажмите "Выход" и зайдите снова.</p>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -637,20 +653,21 @@
      4. РАЦИЯ (АУДИО + ТЕКСТ)
      ============================================================ */
   
-  // Настройка медиа-записи
-  async function setupAudio() {
+  async function initMicrophone() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
       
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         audioChunks = [];
         await uploadVoiceMessage(audioBlob);
       };
+      return true;
     } catch (e) {
-      toast('Нет доступа к микрофону!', 'err');
+      toast('Доступ к микрофону запрещен!', 'err');
+      return false;
     }
   }
 
@@ -661,7 +678,6 @@
     if (isRadioOpen) {
       $('radio-badge').style.display = 'none';
       scrollChatToBottom();
-      // Подписываемся на чат при открытии
       onValue(ref(db, 'radio_messages'), renderRadioChat);
     }
   }
@@ -671,13 +687,12 @@
     setTimeout(() => chat.scrollTop = chat.scrollHeight, 100);
   }
 
-  // Отрисовка сообщений
   function renderRadioChat(snap) {
     const data = snap.val() || {};
     const messages = Object.values(data).sort((a,b) => a.time - b.time);
     const chat = $('radio-chat');
     
-    if (messages.length === lastMsgCount) return; // Нет новых
+    if (messages.length === lastMsgCount) return;
     lastMsgCount = messages.length;
 
     chat.innerHTML = '';
@@ -703,22 +718,17 @@
     });
     scrollChatToBottom();
 
-    // Уведомление для закрытых раций
     if (!isRadioOpen && messages.length > 0) {
-      const last = messages[messages.length - 1];
       $('radio-badge').style.display = 'block';
-      
-      // Вибрация для привлечения внимания
       if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
   }
 
   window.playAudio = function(url) {
     const audio = new Audio(url);
-    audio.play().catch(e => toast('Нажмите еще раз для прослушивания', 'err'));
+    audio.play().catch(e => toast('Нажмите еще раз', 'err'));
   }
 
-  // Отправка текста
   window.sendTextMsg = async function() {
     const text = $('radio-text-input').value.trim();
     if (!text) return;
@@ -735,48 +745,41 @@
     } catch(e) { toast('Ошибка отправки', 'err'); }
   }
 
-  // Запись голоса (PTT)
+  // PTT (Нажал-Записал-Нажал)
   const btnPtt = $('btn-ptt');
-  let pttStartTime = 0;
-
-  btnPtt.addEventListener('mousedown', startRecording);
-  btnPtt.addEventListener('touchstart', startRecording, {passive: true});
   
-  btnPtt.addEventListener('mouseup', stopRecording);
-  btnPtt.addEventListener('touchend', stopRecording);
-
-  async function startRecording(e) {
+  btnPtt.addEventListener('click', async (e) => {
     e.preventDefault();
-    if (isRecording) return;
-    if (!mediaRecorder) await setupAudio();
-    if (!mediaRecorder) return;
-
-    isRecording = true;
-    pttStartTime = Date.now();
-    audioChunks = [];
-    mediaRecorder.start();
-    btnPtt.classList.add('recording');
-    if(navigator.vibrate) navigator.vibrate(50);
-  }
-
-  function stopRecording(e) {
-    if (!isRecording) return;
-    isRecording = false;
-    btnPtt.classList.remove('recording');
     
-    // Если запись меньше 1 секунды — отменяем
-    if (Date.now() - pttStartTime < 1000) {
-      mediaRecorder.stop();
-      audioChunks = [];
-      toast('Слишком коротко', 'err');
-      return;
+    if (!mediaRecorder) {
+      const ok = await initMicrophone();
+      if (!ok) return;
     }
 
-    mediaRecorder.stop();
-  }
+    if (!isRecording) {
+      isRecording = true;
+      audioChunks = [];
+      mediaRecorder.start();
+      
+      btnPtt.classList.add('recording');
+      $('ptt-label').textContent = 'ИДЕТ ЗАПИСЬ... (нажмите чтобы отправить)';
+      if(navigator.vibrate) navigator.vibrate(50);
+      
+    } else {
+      isRecording = false;
+      btnPtt.classList.remove('recording');
+      $('ptt-label').textContent = 'Отправка...';
+      
+      mediaRecorder.stop();
+      
+      setTimeout(() => {
+        $('ptt-label').textContent = 'Нажмите, чтобы начать запись';
+      }, 1000);
+    }
+  });
 
   async function uploadVoiceMessage(blob) {
-    toast('Отправка голосового...', 'ok');
+    toast('Загрузка на сервер...', 'ok');
     try {
       const filename = `radio/${Date.now()}.webm`;
       const fileRef = storageRef(storage, filename);
@@ -836,9 +839,7 @@
     updateConnectionStatus(navigator.onLine);
     requestWakeLock();
     
-    // Показываем кнопку рации
     $('radio-fab').style.display = 'flex';
-    // Подписываемся на уведомления рации
     onValue(ref(db, 'radio_messages'), renderRadioChat);
   }
 
@@ -1168,13 +1169,15 @@
   }
 
   /* ============================================================
-     7. СУДЬЯ НА ЭТАПЕ
+     7. СУДЬЯ НА ЭТАПЕ (С БЛОКИРОВКОЙ ЭТАПА)
      ============================================================ */
   let judgeStage = null;
 
   window.promptJudgeLogin = function() {
-    if (sessionStorage.getItem('judge_name')) {
+    // Восстанавливаем из сессии, если уже входили
+    if (sessionStorage.getItem('judge_name') && sessionStorage.getItem('judge_stage')) {
       currentJudgeName = sessionStorage.getItem('judge_name');
+      judgeStage = parseInt(sessionStorage.getItem('judge_stage'));
       $('judge-name-display').textContent = currentJudgeName;
       openJudgeMode();
       return;
@@ -1186,27 +1189,40 @@
     sessionStorage.setItem('judge_name', name);
     currentJudgeName = name;
     $('judge-name-display').textContent = currentJudgeName;
-    openJudgeMode();
+    
+    // Принудительно открываем выбор этапа
+    openJudgeMode(true);
   }
 
   window.logoutJudge = function() {
     sessionStorage.removeItem('judge_name');
-    toast('Вы вышли');
+    sessionStorage.removeItem('judge_stage');
+    toast('Вы вышли. Этап сброшен.');
     show('scr-role');
     $('radio-fab').style.display = 'none';
+    judgeStage = null;
   }
 
-  window.openJudgeMode = function() {
+  window.openJudgeMode = function(forceSelect = false) {
     show('scr-judge');
     initJudgeSelect();
+    
+    // Если этап уже выбран в сессии, блокируем select
+    const savedStage = sessionStorage.getItem('judge_stage');
+    if (savedStage !== null && !forceSelect) {
+      judgeStage = parseInt(savedStage);
+      $('judge-stage-select').value = judgeStage;
+      $('judge-stage-select').disabled = true;
+    } else {
+      $('judge-stage-select').disabled = false;
+    }
+
     listenAllRaces();
     startJudgeTimer(); 
     updateConnectionStatus(navigator.onLine);
     requestWakeLock();
     
-    // Показываем кнопку рации
     $('radio-fab').style.display = 'flex';
-    // Подписываемся на уведомления рации
     onValue(ref(db, 'radio_messages'), renderRadioChat);
   }
 
@@ -1218,9 +1234,19 @@
     });
   }
 
+  // Вызывается при выборе этапа
   window.setJudgeStage = function() {
     const val = $('judge-stage-select').value;
-    judgeStage = val === '' ? null : parseInt(val);
+    if (val === '') return;
+    
+    judgeStage = parseInt(val);
+    
+    // СОХРАНЯЕМ И БЛОКИРУЕМ
+    sessionStorage.setItem('judge_stage', judgeStage);
+    $('judge-stage-select').disabled = true;
+    toast(`Этап закреплен! Смена только через выход.`, 'ok');
+    if(navigator.vibrate) navigator.vibrate(50);
+    
     renderJudgeList();
   }
 
