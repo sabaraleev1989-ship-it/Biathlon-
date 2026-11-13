@@ -66,7 +66,6 @@
   #scr-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
   .splash-inner{position:relative;width:100%;max-width:440px;padding:20px;text-align:center}
   
-  /* Оставлены только 2 скорпиона: b и c, маленький слева (a) — убран */
   .crawl-scorpion{position:absolute;font-size:30px;filter:drop-shadow(0 0 12px var(--red-glow));opacity:.9;animation:scorpWalk 7s ease-in-out infinite}
   .crawl-scorpion.b{bottom:12%;right:-10%;animation-delay:1.4s;font-size:26px;animation-duration:8.5s}
   .crawl-scorpion.c{top:42%;right:-14%;animation-delay:3s;font-size:20px;animation-duration:10s;opacity:.6}
@@ -165,16 +164,26 @@
   .pen{font-family:var(--mono);font-size:13px;color:var(--red);margin-top:6px;min-height:16px;font-weight:700;animation:penPulse 1.2s ease-in-out infinite}
   @keyframes penPulse{0%,100%{opacity:.85}50%{opacity:1;text-shadow:0 0 12px var(--red-glow)}}
 
+  /* Оверлей паузы — теперь он ПОВЕРХ всего, кроме верха страницы */
   .pause-overlay{
-    display:none;position:absolute;inset:0;background:rgba(10,5,5,.82);backdrop-filter:blur(3px);
-    border-radius:18px;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:5;
-    animation:fade .25s ease;
+    display:none;position:fixed;inset:0;background:rgba(10,5,5,.92);backdrop-filter:blur(5px);
+    z-index:90;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    animation:fade .25s ease; padding: 24px;
   }
   .pause-overlay.on{display:flex}
-  .pause-overlay .icon{font-size:44px;filter:drop-shadow(0 0 16px var(--red-glow));animation:pausePulse 1.6s ease-in-out infinite}
-  @keyframes pausePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
-  .pause-overlay .txt{font-size:14px;font-weight:900;letter-spacing:3px;color:var(--red);text-transform:uppercase}
-  .pause-overlay .sub{font-size:11px;color:var(--dim);letter-spacing:1px;text-align:center;padding:0 20px;line-height:1.4}
+  .pause-overlay .icon{font-size:64px;filter:drop-shadow(0 0 20px var(--red-glow));animation:pausePulse 1.6s ease-in-out infinite}
+  @keyframes pausePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+  .pause-overlay .txt{font-size:20px;font-weight:900;letter-spacing:4px;color:var(--red);text-transform:uppercase}
+  .pause-overlay .sub{font-size:13px;color:var(--txt);letter-spacing:.5px;text-align:center;line-height:1.5;margin-bottom:10px}
+  
+  /* Кнопка возобновления в оверлее */
+  .btn-resume-overlay{
+    background:linear-gradient(180deg,#ff3a3a,#b81414);color:#fff;
+    width:auto; min-width:200px; padding:16px 32px; font-size:18px;
+    border-radius:14px; border:none; font-weight:900; letter-spacing:1px; cursor:pointer;
+    box-shadow:0 10px 30px -10px var(--red-glow); transition:.2s;
+  }
+  .btn-resume-overlay:active{transform:scale(.95)}
 
   /* ============ STAGES ============ */
   .stage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -256,7 +265,7 @@
   .toast{
     position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
     background:#1c0808;border:1px solid var(--red);color:var(--txt);padding:12px 20px;border-radius:12px;
-    font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:99;max-width:90%;
+    font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:999;
     box-shadow:0 12px 30px -10px var(--red-glow);
   }
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -271,7 +280,6 @@
 <body>
 
 <!-- ================= SPLASH ================= -->
-<!-- Убран .crawl-scorpion.a (маленький слева) -->
 <section id="scr-splash" class="screen on">
   <div class="splash-inner">
     <div class="crawl-scorpion b">🦂</div>
@@ -293,6 +301,14 @@
     <div class="splash-hint" style="pointer-events:none">ЗАГРУЗКА ТРАССЫ…</div>
   </div>
 </section>
+
+<!-- ОВЕРЛЕЙ ПАУЗЫ (вынесен из карточки на уровень body) -->
+<div class="pause-overlay" id="pause-overlay">
+  <div class="icon">⏸</div>
+  <div class="txt">ПАУЗА</div>
+  <div class="sub">Таймер остановлен.<br>Время не идёт — можно решить нештатную ситуацию.</div>
+  <button class="btn-resume-overlay" onclick="togglePause()">▶ ПРОДОЛЖИТЬ</button>
+</div>
 
 <div class="app">
 
@@ -339,12 +355,6 @@
         <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
         <div class="timer label">ОБЩЕЕ ВРЕМЯ</div>
         <div class="pen" id="pen"></div>
-      </div>
-
-      <div class="pause-overlay" id="pause-overlay">
-        <div class="icon">⏸</div>
-        <div class="txt">ПАУЗА</div>
-        <div class="sub">Таймер остановлен.<br>Время не идёт — можно решить нештатную ситуацию.</div>
       </div>
 
       <div class="progress" id="pips"></div>
@@ -538,7 +548,10 @@ function pauseRun(){
   $('btn-pause').innerHTML = '▶ ПРОДОЛЖИТЬ';
   $('btn-pause').classList.add('go');
   $('btn-pause').classList.remove('pause-btn');
-  $('btn-next').disabled = true;
+  
+  // На паузе отключаем только визуальную кнопку этапа, но клик будет перехвачен
+  $('btn-next').disabled = false; 
+  
   vibrate([20,60,20]);
   toast('⏸ Пауза — таймер остановлен');
 }
@@ -548,12 +561,13 @@ function resumeRun(){
   const dur = Date.now() - state.pauseStartedAt;
   state.pausedTotal += dur;
   state.pauseStartedAt = null;
+  
   $('pause-overlay').classList.remove('on');
   $('timer-wrap').classList.remove('paused');
   $('btn-pause').innerHTML = '⏸ ПАУЗА';
   $('btn-pause').classList.remove('go');
   $('btn-pause').classList.add('pause-btn');
-  $('btn-next').disabled = false;
+  
   vibrate([15,40,15]);
   toast('▶ Продолжаем — таймер пошёл');
 }
@@ -570,8 +584,7 @@ function renderStage(){
   $('split-info').textContent = state.splits.length ? `прошлый сплит: ${fmtShort(state.splits[state.splits.length-1].ms)}` : '';
 
   const body=$('stage-body'); body.innerHTML='';
-  $('btn-next').disabled = isPaused();
-
+  
   if(st.type==='shoot'){
     body.appendChild(buildShootForm(st));
     $('btn-next').textContent='СТРЕЛЬБА ЗАВЕРШЕНА ✓';
@@ -699,7 +712,12 @@ function recalcPistol(st){
 
 /* ---------- COMPLETE STAGE ---------- */
 function completeStage(){
-  if(isPaused()){ toast('Снимите паузу перед завершением этапа', true); return; }
+  // Если на паузе, не даём завершить этап, показываем предупреждение
+  if(isPaused()){ 
+    toast('Сначала снимите паузу!', true); 
+    return; 
+  }
+  
   const i=state.stageIdx, st=STAGES[i];
   const now=Date.now();
 
@@ -784,6 +802,7 @@ function abortRun(){
   cancelAnimationFrame(timerRAF);
   releaseWakeLock();
   state=null;
+  $('pause-overlay').classList.remove('on');
   show('scr-start');
 }
 
@@ -858,7 +877,7 @@ document.addEventListener('visibilitychange', ()=>{
 
   if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     const swCode = `
-      const CACHE='scorpion-tb-v3';
+      const CACHE='scorpion-tb-v4';
       const SHELL=[location.href];
       self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL).catch(()=>{}))); });
       self.addEventListener('activate',e=>{ e.waitUntil(self.clients.claim()); });
@@ -873,13 +892,11 @@ document.addEventListener('visibilitychange', ()=>{
     navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
   }
 
-  // Быстрый тап — сразу пропустить заставку
+  // Заставка: пропуск по тапу или через 5 сек
   $('scr-splash').addEventListener('click', skipSplash);
-
-  // Автоматический переход через 5 секунд (надёжно)
   setTimeout(skipSplash, 5000);
 
-  // quick-team chips
+  // Быстрый выбор команды
   document.querySelectorAll('.quick-teams button').forEach(b=>{
     b.addEventListener('click', ()=>{
       document.querySelectorAll('.quick-teams button').forEach(x=>x.classList.remove('on'));
@@ -889,14 +906,12 @@ document.addEventListener('visibilitychange', ()=>{
   });
 })();
 
-// Функция перехода с заставки
 let splashSkipped = false;
 function skipSplash(){
   if(splashSkipped) return;
   splashSkipped = true;
   const splash = $('scr-splash');
   splash.classList.add('hide');
-  // даём анимации исчезновения пройти
   setTimeout(() => {
     splash.style.display = 'none';
     show('scr-start');
