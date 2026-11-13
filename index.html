@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#111411" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>SCORPION TACTICAL BIATHLON</title>
+<link rel="manifest" id="manifest-link" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23111411'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%23e8b923'>🦂</text></svg>" />
+<style>
+  :root{
+    --bg:#0d0f0d; --panel:#171b17; --panel2:#1f251f; --line:#2c332c;
+    --txt:#e8ece6; --dim:#8f9a8c; --accent:#e8b923; --accent2:#8fd14f;
+    --danger:#e05545; --gold:#ffd24a; --silver:#cfd6dd; --bronze:#cd8b52;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%,#1a201a 0%,var(--bg) 60%);
+    color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    overscroll-behavior:none;user-select:none;
+  }
+  .app{max-width:520px;margin:0 auto;padding:14px 14px calc(24px + env(safe-area-inset-bottom));min-height:100%}
+  .screen{display:none;animation:fade .25s ease}
+  .screen.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.5px;font-size:15px}
+  .brand .sc{font-size:22px;filter:drop-shadow(0 0 6px rgba(232,185,35,.5))}
+  .brand small{display:block;font-weight:500;color:var(--dim);font-size:10px;letter-spacing:1.5px}
+
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:16px}
+  .muted{color:var(--dim);font-size:12.5px;line-height:1.45}
+  h2{margin:0 0 12px;font-size:17px;letter-spacing:.3px}
+  h3{margin:0 0 8px;font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:1.4px;font-weight:700}
+
+  label{display:block;font-size:12px;color:var(--dim);margin:10px 0 5px;letter-spacing:.4px}
+  input,select{
+    width:100%;padding:13px 12px;border-radius:11px;border:1px solid var(--line);
+    background:#0b0d0b;color:var(--txt);font-size:16px;outline:none;font-family:inherit;
+  }
+  input:focus,select:focus{border-color:var(--accent)}
+
+  .btn{
+    width:100%;padding:16px;border-radius:13px;border:1px solid transparent;font-size:16px;
+    font-weight:800;letter-spacing:.4px;cursor:pointer;font-family:inherit;transition:.15s;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn:active{transform:scale(.985)}
+  .btn.primary{background:linear-gradient(180deg,#f0c53a,#d9a312);color:#191200;box-shadow:0 6px 20px -6px rgba(232,185,35,.55)}
+  .btn.go{background:linear-gradient(180deg,#9fe060,#6aab2f);color:#0c1405;box-shadow:0 6px 20px -6px rgba(143,209,79,.5)}
+  .btn.ghost{background:#141814;border-color:var(--line);color:var(--txt)}
+  .btn.danger{background:transparent;border-color:#5a2a24;color:#f0897a}
+  .btn:disabled{opacity:.4;pointer-events:none}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+
+  /* TIMER */
+  .timer-wrap{text-align:center;padding:18px 0 6px}
+  .timer{font-family:var(--mono);font-size:clamp(40px,13vw,58px);font-weight:800;letter-spacing:1px;line-height:1;color:var(--txt);font-variant-numeric:tabular-nums}
+  .timer .ms{font-size:.45em;color:var(--accent);margin-left:2px}
+  .timer.label{font-size:11px;letter-spacing:3px;color:var(--dim);margin-top:8px;font-weight:600}
+  .pen{font-family:var(--mono);font-size:13px;color:var(--danger);margin-top:6px;min-height:16px}
+
+  /* STAGES */
+  .stage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .badge{background:#0b0d0b;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.5px}
+  .stage-title{font-size:19px;font-weight:800;line-height:1.25;margin:4px 0 6px}
+  .stage-desc{color:var(--dim);font-size:13px;line-height:1.45;margin-bottom:14px}
+
+  .progress{display:flex;gap:5px;margin:12px 0 4px}
+  .pip{flex:1;height:6px;border-radius:3px;background:#242a24;transition:.2s}
+  .pip.done{background:var(--accent2)}
+  .pip.now{background:var(--accent);box-shadow:0 0 10px rgba(232,185,35,.6)}
+  .pips-label{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);margin-top:6px;letter-spacing:.5px}
+
+  /* SHOOTING FORM */
+  .shoot-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .pos{background:#0b0d0b;border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
+  .pos .nm{font-size:12px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;font-weight:700}
+  .pos .ct{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px}
+  .pos button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:#141814;color:var(--txt);font-size:20px;font-weight:700;cursor:pointer;font-family:inherit}
+  .pos button:active{background:var(--accent);color:#111}
+  .pos .val{font-family:var(--mono);font-size:22px;font-weight:800;min-width:22px}
+  .hits .val{color:var(--accent2)}
+  .miss .val{color:var(--danger)}
+
+  /* CHECKLIST */
+  .check{display:flex;align-items:center;gap:12px;padding:13px 12px;border:1px solid var(--line);border-radius:12px;background:#0b0d0b;margin-bottom:9px;cursor:pointer;transition:.15s}
+  .check.on{border-color:var(--accent2);background:#12180f}
+  .check .box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;flex:none;font-size:14px;color:transparent;transition:.15s}
+  .check.on .box{background:var(--accent2);border-color:var(--accent2);color:#0c1405}
+  .check .tx{font-size:14px;line-height:1.3}
+
+  /* RESULTS */
+  .res-hero{text-align:center;padding:8px 0 4px}
+  .res-hero .big{font-family:var(--mono);font-size:46px;font-weight:800;letter-spacing:1px}
+  .res-hero .sub{color:var(--dim);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px}
+  .stat-row{display:flex;gap:10px;margin-top:14px}
+  .stat{flex:1;background:#0b0d0b;border:1px solid var(--line);border-radius:12px;padding:11px 8px;text-align:center}
+  .stat .k{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+  .stat .v{font-family:var(--mono);font-size:19px;font-weight:800;margin-top:4px}
+
+  table{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
+  th{text-align:left;font-size:10.5px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:700}
+  td{padding:10px 6px;border-bottom:1px solid #1d231d;font-family:var(--mono);font-size:13px}
+  td.nm{font-family:inherit;font-weight:600}
+  tr.me td{color:var(--accent)}
+  .medal{font-size:16px}
+
+  .cat-title{display:flex;align-items:center;gap:8px;margin:18px 0 6px;font-size:13px;font-weight:800;letter-spacing:1px;color:var(--accent)}
+  .cat-title::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .pill-note{display:flex;gap:8px;align-items:flex-start;background:#12160f;border:1px solid #26301f;border-radius:11px;padding:10px 12px;font-size:12px;color:var(--dim);line-height:1.4;margin-top:12px}
+  .pill-note b{color:var(--accent2)}
+
+  .footer-note{text-align:center;color:#4d574b;font-size:10.5px;letter-spacing:1px;margin-top:18px}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:#1d241c;border:1px solid var(--accent2);color:var(--txt);padding:11px 18px;border-radius:12px;
+    font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90%;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:var(--danger)}
+
+  .medal-big{font-size:64px;text-align:center;margin:6px 0 2px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))}
+  .place-txt{text-align:center;font-size:13px;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+  .place-txt b{display:block;font-size:20px;color:var(--txt);letter-spacing:.5px;margin-top:2px;text-transform:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= START ================= -->
+  <section id="scr-start" class="screen on">
+    <header>
+      <div class="brand"><span class="sc">🦂</span><div>SCORPION<small>TACTICAL BIATHLON · СОЧИ ПУЛЬС</small></div></div>
+    </header>
+
+    <div class="card">
+      <h2>Регистрация участника</h2>
+      <p class="muted">Тактическая гонка с препятствиями и стрельбой. Зачёт по времени + штрафы. Медали — по категориям.</p>
+
+      <label for="fio">ФИО участника</label>
+      <input id="fio" placeholder="Иванов Иван" autocomplete="name" />
+
+      <label for="cat">Категория</label>
+      <select id="cat">
+        <option value="junior">Юниор (до 18)</option>
+        <option value="adult" selected>Взрослый (18–39)</option>
+        <option value="veteran">Ветеран (40+)</option>
+      </select>
+
+      <label for="team">Команда</label>
+      <select id="team">
+        <option value="Сочи Пульс">Сочи Пульс</option>
+        <option value="СК Скорпион">СК Скорпион</option>
+        <option value="Гость">Гость</option>
+      </select>
+
+      <div style="height:14px"></div>
+      <button class="btn primary" onclick="startRun()">▶ СТАРТ ТРАССЫ</button>
+
+      <div class="pill-note">
+        <span>🎯</span><div><b>Штрафы:</b> промах +10 с · эвакуация +15 с · жгут +15 с · обход препятствия +30 с.</div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" onclick="showResults()">🏆 Результаты</button>
+    </div>
+    <div class="footer-note">PWA · работает офлайн · установи на домашний экран</div>
+  </section>
+
+  <!-- ================= RACE ================= -->
+  <section id="scr-race" class="screen">
+    <header>
+      <div class="brand"><span class="sc">🦂</span><div id="race-name">—<small id="race-meta">—</small></div></div>
+      <button class="btn ghost" style="width:auto;padding:9px 13px;font-size:12px" onclick="abortRun()">✕</button>
+    </header>
+
+    <div class="card">
+      <div class="timer-wrap">
+        <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
+        <div class="timer label">ОБЩЕЕ ВРЕМЯ</div>
+        <div class="pen" id="pen"></div>
+      </div>
+
+      <div class="progress" id="pips"></div>
+      <div class="pips-label"><span id="step-lbl">ЭТАП 1 / 10</span><span id="stage-split"></span></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="stage-head">
+        <span class="badge" id="badge">ЭТАП 1</span>
+        <span class="muted" id="split-info"></span>
+      </div>
+      <div class="stage-title" id="st-title">—</div>
+      <div class="stage-desc" id="st-desc">—</div>
+
+      <div id="stage-body"></div>
+
+      <div style="height:12px"></div>
+      <button class="btn go" id="btn-next" onclick="completeStage()">ЭТАП ПРОЙДЕН ✓</button>
+    </div>
+  </section>
+
+  <!-- ================= FINISH ================= -->
+  <section id="scr-finish" class="screen">
+    <header>
+      <div class="brand"><span class="sc">🦂</span><div>ФИНИШ<small>РЕЗУЛЬТАТ</small></div></div>
+    </header>
+
+    <div class="card">
+      <div class="res-hero">
+        <div class="big" id="fin-time">00:00.00</div>
+        <div class="sub">Зачётное время</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="k">Чистое</div><div class="v" id="fin-clean">0:00</div></div>
+        <div class="stat"><div class="k">Штраф</div><div class="v" style="color:var(--danger)" id="fin-pen">+0с</div></div>
+        <div class="stat"><div class="k">Промахи</div><div class="v" id="fin-miss">0</div></div>
+      </div>
+
+      <div class="medal-big" id="fin-medal" style="display:none">🥇</div>
+      <div class="place-txt" id="fin-place" style="display:none">Место<b>1</b></div>
+
+      <div style="height:14px"></div>
+      <button class="btn primary" onclick="showResults()">🏆 Таблица результатов</button>
+      <div style="height:9px"></div>
+      <button class="btn ghost" onclick="location.reload()">Новый заезд</button>
+    </div>
+    <div class="footer-note">СК Скорпион · Сочи Пульс</div>
+  </section>
+
+  <!-- ================= RESULTS ================= -->
+  <section id="scr-results" class="screen">
+    <header>
+      <div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>МЕДАЛИ ПО КАТЕГОРИЯМ</small></div></div>
+    </header>
+
+    <div class="card">
+      <h3>Тройка призёров</h3>
+      <div id="podium"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3>Общий протокол</h3>
+      <div id="tables"></div>
+      <div class="pill-note">
+        <span>📊</span><div>Результаты сохраняются <b>локально</b> (IndexedDB/Storage) и не теряются без сети. Медали — по каждой категории.</div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" onclick="backToStart()">← На старт</button>
+      <button class="btn danger" onclick="clearAll()">Очистить</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   SCORPION TACTICAL BIATHLON — single-file PWA
+   ============================================================ */
+
+/* ---------- STAGES DEFINITION ---------- */
+const STAGES = [
+  { id:'run1',   title:'Бег 50–60 м',              desc:'Стартовый спринт до первого препятствия.', type:'simple' },
+  { id:'crawl1', title:'Пролезание под препятствием', desc:'Пролезть под низким препятствием. Обход запрещён.', type:'simple' },
+  { id:'climb',  title:'Перелезть через препятствие', desc:'Преодолеть высокое препятствие.', type:'simple' },
+  { id:'shoot1', title:'Стрельба: лёжа / сидя / стоя', desc:'Три позиции. Промах = +10 с. Отметь попадания и промахи.', type:'shoot' },
+  { id:'crawl2', title:'Пролезание 10 м под препятствием', desc:'Длинный низкий участок — 10 метров.', type:'simple' },
+  { id:'evac',   title:'Эвакуация раненого (живот)', desc:'Эвакуировать «раненого» с ранением в живот. Контроль техники судьёй.', type:'check',
+    checks:[['Фиксация головы/шеи',10],['Контроль живота (без волочения)',12],['Доставка до безопасной зоны',10]] },
+  { id:'run2',   title:'Бег 50 м',                 desc:'Ускорение к следующему рубежу.', type:'simple' },
+  { id:'tourniquet', title:'Наложение жгута себе на руку', desc:'Самостоятельно наложить жгут. Контроль судьи.', type:'check',
+    checks:[['Жгут выше раны',10],['Достаточное натяжение',8],['Время наложения зафиксировано',5]] },
+  { id:'shoot2', title:'Стрельба по противнику за укрытием', desc:'Стрельба из-за укрытия. Промах = +10 с.', type:'shoot' },
+  { id:'finish', title:'Финишный бег',             desc:'Последний рывок к финишу!', type:'simple' }
+];
+
+const PENALTY = { miss:10, obstacle:30 };
+
+/* ---------- STATE ---------- */
+let state = null;
+let timerRAF = null;
+let wakeLock = null;
+
+/* ---------- STORAGE (localStorage fallback, works offline) ---------- */
+const DB_KEY = 'scorpion_tb_runs_v1';
+function loadRuns(){ try{ return JSON.parse(localStorage.getItem(DB_KEY)||'[]'); }catch(e){ return []; } }
+function saveRuns(r){ try{ localStorage.setItem(DB_KEY, JSON.stringify(r)); }catch(e){} }
+function addRun(run){ const r=loadRuns(); r.push(run); saveRuns(r); }
+
+/* ---------- UI HELPERS ---------- */
+function $(id){ return document.getElementById(id); }
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on'); window.scrollTo(0,0); }
+let toastT=null;
+function toast(msg, err){
+  const t=$('toast'); t.textContent=msg; t.classList.toggle('err',!!err); t.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2200);
+}
+function fmt(ms){
+  if(ms<0) ms=0;
+  const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), cs=Math.floor(ms%1000/10);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<span class="ms">.${String(cs).padStart(2,'0')}</span>`;
+}
+function fmtShort(ms){
+  const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function vibrate(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
+
+/* ---------- START ---------- */
+function startRun(){
+  const fio=$('fio').value.trim() || 'Участник';
+  state = {
+    fio,
+    cat: $('cat').value,
+    team: $('team').value,
+    startAt: Date.now(),
+    stageIdx: 0,
+    splits: [],
+    penalties: 0,
+    misses: 0,
+    shoot: {},          // stageId -> {lying:{hits,miss}, ...}
+    checks: {},         // stageId -> [bool,...]
+    finished: false
+  };
+  $('race-name').firstChild.textContent = fio;
+  $('race-meta').textContent = `${state.team} · ${labelCat(state.cat)}`;
+  show('scr-race');
+  buildPips();
+  renderStage();
+  startTimer();
+  requestWakeLock();
+}
+
+function labelCat(c){ return c==='junior'?'Юниор':c==='veteran'?'Ветеран':'Взрослый'; }
+
+function startTimer(){
+  cancelAnimationFrame(timerRAF);
+  const tick=()=>{
+    const el=$('timer'); if(!el) return;
+    el.innerHTML = fmt(Date.now()-state.startAt);
+    $('pen').textContent = state.penalties>0 ? `штраф +${state.penalties} с` : '';
+    timerRAF=requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function buildPips(){
+  const w=$('pips'); w.innerHTML='';
+  STAGES.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='pip'+(i<state.stageIdx?' done':i===state.stageIdx?' now':'');
+    w.appendChild(d);
+  });
+}
+
+/* ---------- STAGE RENDER ---------- */
+function renderStage(){
+  const i=state.stageIdx, st=STAGES[i];
+  $('badge').textContent = `ЭТАП ${i+1}`;
+  $('step-lbl').textContent = `ЭТАП ${i+1} / ${STAGES.length}`;
+  $('st-title').textContent = st.title;
+  $('st-desc').textContent = st.desc;
+  $('split-info').textContent = state.splits.length ? `прошлый сплит: ${fmtShort(state.splits[state.splits.length-1].ms)}` : '';
+
+  const body=$('stage-body'); body.innerHTML='';
+  $('btn-next').disabled=false;
+
+  if(st.type==='shoot'){
+    body.appendChild(buildShootForm(st));
+    $('btn-next').textContent='СТРЕЛЬБА ЗАВЕРШЕНА ✓';
+  } else if(st.type==='check'){
+    body.appendChild(buildCheckList(st));
+    $('btn-next').textContent='ЭТАП ПРОЙДЕН ✓';
+  } else {
+    $('btn-next').textContent='ЭТАП ПРОЙДЕН ✓';
+  }
+  buildPips();
+}
+
+function buildShootForm(st){
+  const wrap=document.createElement('div');
+  const prev = state.shoot[st.id] || {
+    lying:{hits:0,miss:0}, sitting:{hits:0,miss:0}, standing:{hits:0,miss:0}
+  };
+  state.shoot[st.id]=prev;
+
+  ['lying','sitting','standing'].forEach(pos=>{
+    const p=document.createElement('div'); p.className='pos';
+    const nm = pos==='lying'?'Лёжа':pos==='sitting'?'Сидя':'Стоя';
+    p.innerHTML=`<div class="nm">${nm}</div>
+      <div class="ct">
+        <div class="hits"><div class="val" data-h="${pos}">${prev[pos].hits}</div></div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <button data-act="hit+" data-pos="${pos}">+</button>
+          <button data-act="hit-" data-pos="${pos}">−</button>
+        </div>
+      </div>
+      <div class="ct" style="margin-top:6px">
+        <div class="miss"><div class="val" data-m="${pos}">${prev[pos].miss}</div></div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <button data-act="miss+" data-pos="${pos}">+</button>
+          <button data-act="miss-" data-pos="${pos}">−</button>
+        </div>
+      </div>
+      <div class="muted" style="font-size:10px;margin-top:6px;text-align:left">↑ попадания / промахи ↓</div>`;
+    wrap.appendChild(p);
+  });
+
+  wrap.addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    const pos=b.dataset.pos, act=b.dataset.act;
+    const o=state.shoot[st.id][pos];
+    if(act==='hit+') o.hits++;
+    if(act==='hit-'&&o.hits>0) o.hits--;
+    if(act==='miss+') o.miss++;
+    if(act==='miss-'&&o.miss>0) o.miss--;
+    wrap.querySelector(`[data-h="${pos}"]`).textContent=o.hits;
+    wrap.querySelector(`[data-m="${pos}"]`).textContent=o.miss;
+    vibrate(8);
+  });
+  return wrap;
+}
+
+function buildCheckList(st){
+  const wrap=document.createElement('div');
+  if(!state.checks[st.id]) state.checks[st.id]=st.checks.map(()=>false);
+  st.checks.forEach((c,idx)=>{
+    const el=document.createElement('div');
+    el.className='check'+(state.checks[st.id][idx]?' on':'');
+    el.innerHTML=`<div class="box">✓</div><div class="tx">${c[0]} <span class="muted">(+${c[1]} с)</span></div>`;
+    el.onclick=()=>{
+      state.checks[st.id][idx]=!state.checks[st.id][idx];
+      el.classList.toggle('on', state.checks[st.id][idx]);
+      vibrate(8);
+    };
+    wrap.appendChild(el);
+  });
+  return wrap;
+}
+
+/* ---------- COMPLETE STAGE ---------- */
+function completeStage(){
+  const i=state.stageIdx, st=STAGES[i];
+  const now=Date.now();
+
+  // apply penalties for shooting
+  if(st.type==='shoot'){
+    const s=state.shoot[st.id];
+    let miss=0;
+    ['lying','sitting','standing'].forEach(p=>{ miss += s[p].miss; });
+    state.misses += miss;
+    state.penalties += miss*PENALTY.miss;
+    if(miss>0) toast(`Промахи: ${miss} · штраф +${miss*PENALTY.miss} с`, true);
+  }
+
+  // apply penalties for checklists (unchecked = penalty)
+  if(st.type==='check'){
+    const arr=state.checks[st.id];
+    let pen=0;
+    st.checks.forEach((c,idx)=>{ if(!arr[idx]) pen += c[1]; });
+    state.penalties += pen;
+    if(pen>0) toast(`Не отмечено корректно: штраф +${pen} с`, true);
+  }
+
+  state.splits.push({ stage: st.id, ms: now - (state.splits.length? state.lastAt||state.startAt : state.startAt), at: now });
+  state.lastAt = now;
+  state.stageIdx++;
+
+  if(state.stageIdx >= STAGES.length){
+    finishRun();
+  } else {
+    renderStage();
+    $('stage-split').textContent = `сплит: ${fmtShort(state.splits[state.splits.length-1].ms)}`;
+    vibrate([10,30,10]);
+  }
+}
+
+/* ---------- FINISH ---------- */
+function finishRun(){
+  cancelAnimationFrame(timerRAF);
+  releaseWakeLock();
+  const total = (Date.now() - state.startAt) + state.penalties*1000;
+  state.finished = true;
+  state.totalMs = total;
+  state.cleanMs = Date.now() - state.startAt;
+  state.endedAt = Date.now();
+
+  const run = {
+    fio: state.fio, cat: state.cat, team: state.team,
+    totalMs: total, cleanMs: state.cleanMs, penalties: state.penalties,
+    misses: state.misses, at: state.endedAt
+  };
+  addRun(run);
+
+  $('fin-time').innerHTML = fmt(total);
+  $('fin-clean').textContent = fmtShort(state.cleanMs);
+  $('fin-pen').textContent = `+${state.penalties}с`;
+  $('fin-miss').textContent = state.misses;
+
+  // place preview
+  const peers = loadRuns().filter(r=>r.cat===state.cat).sort((a,b)=>a.totalMs-b.totalMs);
+  const place = peers.findIndex(r=>r.at===run.at && r.totalMs===run.totalMs)+1;
+  const medal = place===1?'🥇':place===2?'🥈':place===3?'🥉':null;
+  const pm=$('fin-medal'), pp=$('fin-place');
+  if(medal){ pm.style.display='block'; pm.textContent=medal; pp.style.display='block'; pp.innerHTML=`Место в категории<b>${place} из ${peers.length}</b>`; }
+  else { pm.style.display='none'; pp.style.display='block'; pp.innerHTML=`Место в категории<b>${place} из ${peers.length}</b>`; }
+
+  show('scr-finish');
+  vibrate([40,60,40,60,120]);
+}
+
+/* ---------- ABORT ---------- */
+function abortRun(){
+  if(!confirm('Прервать заезд? Результат не будет сохранён.')) return;
+  cancelAnimationFrame(timerRAF);
+  releaseWakeLock();
+  state=null;
+  show('scr-start');
+}
+
+/* ---------- RESULTS ---------- */
+function showResults(){
+  cancelAnimationFrame(timerRAF);
+  releaseWakeLock();
+  const runs = loadRuns();
+  renderPodium(runs);
+  renderTables(runs);
+  show('scr-results');
+}
+
+function renderPodium(runs){
+  const box=$('podium');
+  // best overall (all categories) — but medals shown per category in tables
+  const top = [...runs].sort((a,b)=>a.totalMs-b.totalMs).slice(0,3);
+  if(!top.length){ box.innerHTML='<p class="muted">Пока нет результатов. Пройди трассу первым!</p>'; return; }
+  const medals=['🥇','🥈','🥉'];
+  box.innerHTML = top.map((r,i)=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #1d231d">
+      <div class="medal" style="font-size:24px">${medals[i]}</div>
+      <div style="flex:1">
+        <div style="font-weight:700">${esc(r.fio)}</div>
+        <div class="muted" style="font-size:11px">${esc(r.team)} · ${labelCat(r.cat)}</div>
+      </div>
+      <div style="font-family:var(--mono);font-weight:800;color:var(--accent)">${fmtShort(r.totalMs)}</div>
+    </div>`).join('');
+}
+
+function renderTables(runs){
+  const box=$('tables');
+  if(!runs.length){ box.innerHTML='<p class="muted">Нет данных.</p>'; return; }
+  const cats=['junior','adult','veteran'];
+  let html='';
+  cats.forEach(c=>{
+    const list=runs.filter(r=>r.cat===c).sort((a,b)=>a.totalMs-b.totalMs);
+    if(!list.length) return;
+    html += `<div class="cat-title">${labelCat(c)}</div>`;
+    html += `<table><thead><tr><th>#</th><th>Участник</th><th>Команда</th><th>Время</th></tr></thead><tbody>`;
+    list.forEach((r,i)=>{
+      const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+      html += `<tr><td>${m||i+1}</td><td class="nm">${esc(r.fio)}</td><td style="font-family:inherit;color:var(--dim)">${esc(r.team)}</td><td>${fmtShort(r.totalMs)}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  });
+  box.innerHTML = html;
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function backToStart(){ show('scr-start'); }
+
+function clearAll(){
+  if(!confirm('Удалить все результаты? Действие необратимо.')) return;
+  localStorage.removeItem(DB_KEY);
+  toast('Результаты очищены');
+  showResults();
+}
+
+/* ---------- WAKE LOCK ---------- */
+async function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); }
+  }catch(e){}
+}
+function releaseWakeLock(){ try{ wakeLock && wakeLock.release(); }catch(e){} }
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && state && !state.finished){ requestWakeLock(); }
+});
+
+/* ---------- PWA: manifest + service worker inline ---------- */
+(function initPWA(){
+  // inline manifest via Blob
+  const manifest = {
+    name: "SCORPION Tactical Biathlon",
+    short_name: "Scorpion TB",
+    description: "Тактический биатлон — Сочи Пульс / СК Скорпион",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#0d0f0d",
+    theme_color: "#111411",
+    orientation: "portrait",
+    icons: [
+      { src: "data:image/svg+xml,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='#111411'/><text x='256' y='340' font-size='260' text-anchor='middle' fill='#e8b923'>🦂</text></svg>`), sizes:"512x512", type:"image/svg+xml", purpose:"any" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  document.getElementById('manifest-link').href = URL.createObjectURL(blob);
+
+  // service worker: cache shell for offline
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    const swCode = `
+      const CACHE='scorpion-tb-v1';
+      const SHELL=[location.href];
+      self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL).catch(()=>{}))); });
+      self.addEventListener('activate',e=>{ e.waitUntil(self.clients.claim()); });
+      self.addEventListener('fetch',e=>{
+        if(e.request.method!=='GET') return;
+        e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
+          const cp=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,cp).catch(()=>{})); return res;
+        }).catch(()=>caches.match(location.href))));
+      });
+    `;
+    const swBlob = new Blob([swCode], {type:'text/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+  }
+})();
+
+/* ---------- PREVENT ZOOM/SCROLL ISSUES ---------- */
+document.addEventListener('gesturestart', e=>e.preventDefault());
+</script>
+</body>
+</html>
