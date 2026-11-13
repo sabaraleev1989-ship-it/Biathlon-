@@ -21,7 +21,7 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%}
   body{
-    background:radial-gradient(900px 500px at 50% -8%,#2a0a0a 0%,transparent 60%),var(--bg);
+    background:var(--bg);
     color:var(--txt);font-family:var(--sans);overscroll-behavior:none;user-select:none;overflow-x:hidden;
   }
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.35;background-image:repeating-linear-gradient(0deg,rgba(255,45,45,.03) 0 1px,transparent 1px 3px);mix-blend-mode:overlay;}
@@ -60,6 +60,24 @@
   .btn:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);box-shadow:none;}
   .row{display:flex;gap:10px} .row>*{flex:1}
 
+  /* ============ MAIN MENU (С ФОНОМ 12.PNG) ============ */
+  #scr-role {
+    background-image: url('12.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    min-height: 100vh;
+    margin: -14px; /* Компенсируем паддинг родителя */
+    padding: 14px;
+    position: relative;
+  }
+  #scr-role::before {
+    content: ""; position: absolute; inset: 0;
+    background: rgba(10,5,5,0.75); /* Затемнение, чтобы кнопки читались */
+    z-index: 0;
+  }
+  #scr-role > * { position: relative; z-index: 1; }
+  
   /* ============ TIMER ============ */
   .timer{font-family:var(--mono);font-size:clamp(42px,13vw,60px);font-weight:900;letter-spacing:1px;line-height:1;color:var(--txt);text-align:center;margin:16px 0 6px;}
   .timer .ms{font-size:.45em;color:var(--red)}
@@ -191,28 +209,24 @@
   .modal-actions{display:flex;gap:10px;margin-top:16px;}
 
   /* ============================================================
-     БРУТАЛЬНАЯ ЗАСТАВКА
+     ЗАСТАВКА (123.png)
      ============================================================ */
   #scr-splash {
     position: fixed; inset: 0; z-index: 100;
     background-color: #000;
     display: flex; align-items: flex-end; justify-content: center;
     overflow: hidden;
-    transition: opacity .8s ease, visibility .8s ease;
+    transition: opacity .6s ease, visibility .6s ease;
   }
   #scr-splash.hide { opacity: 0; visibility: hidden; pointer-events: none; }
-  
-  .splash-bg {
+
+  #scr-splash .splash-bg {
     position: absolute; inset: 0;
     background-image: url('123.png');
     background-size: cover;
     background-position: center top;
     z-index: 1;
     animation: slowZoom 10s ease-out forwards;
-  }
-  @keyframes slowZoom {
-    0% { transform: scale(1.1); }
-    100% { transform: scale(1); }
   }
   
   .splash-bg::after {
@@ -227,7 +241,6 @@
     display: flex; flex-direction: column; align-items: center; gap: 8px;
   }
 
-  /* Стиль для текста (брутальный, с тенями) */
   .brutal-text {
     font-family: "Impact", "Arial Black", sans-serif;
     text-transform: uppercase;
@@ -238,99 +251,41 @@
       0 4px 0 #3a0707,
       0 6px 10px rgba(0,0,0,0.8),
       0 0 20px rgba(255,45,45,0.4);
-    transform: skewX(-5deg); /* Легкий наклон для агрессивности */
+    transform: skewX(-5deg);
   }
 
-  .splash-line-1 {
-    font-size: 16px;
-    color: #ccc;
-    letter-spacing: 4px;
-    text-shadow: 0 2px 4px #000;
-    animation: slamIn .6s cubic-bezier(.2,.9,.3,1.2) .2s both;
-  }
-  
-  .splash-line-2 {
-    font-size: 32px;
-    color: var(--red);
-    line-height: 1;
-    text-shadow: 
-      0 2px 0 #4a0a0a,
-      0 4px 0 #3a0707,
-      0 8px 20px rgba(0,0,0,1),
-      0 0 30px var(--red-glow);
-    animation: slamIn .6s cubic-bezier(.2,.9,.3,1.2) .5s both;
-  }
+  .splash-line-1 { font-size: 16px; color: #ccc; letter-spacing: 4px; text-shadow: 0 2px 4px #000; animation: slamIn .6s cubic-bezier(.2,.9,.3,1.2) .2s both; }
+  .splash-line-2 { font-size: 32px; color: var(--red); line-height: 1; text-shadow: 0 2px 0 #4a0a0a, 0 4px 0 #3a0707, 0 8px 20px rgba(0,0,0,1), 0 0 30px var(--red-glow); animation: slamIn .6s cubic-bezier(.2,.9,.3,1.2) .5s both; }
+  .splash-line-3 { font-size: 14px; color: #fff; letter-spacing: 3px; margin-top: 8px; padding: 6px 16px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); animation: slamIn .6s cubic-bezier(.2,.9,.3,1.2) .8s both; }
 
-  .splash-line-3 {
-    font-size: 14px;
-    color: #fff;
-    letter-spacing: 3px;
-    margin-top: 8px;
-    padding: 6px 16px;
-    border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(0,0,0,0.4);
-    backdrop-filter: blur(2px);
-    animation: slamIn .6s cubic-bezier(.2,.9,.3,1.2) .8s both;
-  }
-
-  /* Анимация "удара" текста */
-  @keyframes slamIn {
-    0% { opacity: 0; transform: scale(2) translateY(-20px) skewX(-5deg); filter: blur(4px); }
-    70% { opacity: 1; transform: scale(0.95) translateY(0) skewX(-5deg); filter: blur(0); }
-    100% { opacity: 1; transform: scale(1) translateY(0) skewX(-5deg); }
-  }
-
-  /* Пульс */
   .pulse-container {
     height: 60px; width: 100%; max-width: 300px; margin-top: 16px;
     animation: fadeIn 1s ease 1.2s both;
   }
-  .pulse-svg {
-    width: 100%; height: 100%;
-    filter: drop-shadow(0 0 12px var(--red));
-  }
-  .pulse-path {
-    fill: none;
-    stroke: var(--red);
-    stroke-width: 5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 800;
-    stroke-dashoffset: 800;
-    animation: drawPulse 2.5s linear infinite;
-  }
-  @keyframes drawPulse {
-    0% { stroke-dashoffset: 800; opacity: 0; }
-    15% { opacity: 1; }
-    50% { stroke-dashoffset: 0; opacity: 1; }
-    85% { opacity: 1; }
-    100% { stroke-dashoffset: -800; opacity: 0; }
-  }
+  .pulse-svg { width: 100%; height: 100%; filter: drop-shadow(0 0 12px var(--red)); }
+  .pulse-path { fill: none; stroke: var(--red); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 800; stroke-dashoffset: 800; animation: drawPulse 2.5s linear infinite; }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes slowZoom { 0% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  @keyframes slamIn { 0% { opacity: 0; transform: scale(2) translateY(-20px) skewX(-5deg); filter: blur(4px); } 70% { opacity: 1; transform: scale(0.95) translateY(0) skewX(-5deg); filter: blur(0); } 100% { opacity: 1; transform: scale(1) translateY(0) skewX(-5deg); } }
+  @keyframes drawPulse { 0% { stroke-dashoffset: 800; opacity: 0; } 15% { opacity: 1; } 50% { stroke-dashoffset: 0; opacity: 1; } 85% { opacity: 1; } 100% { stroke-dashoffset: -800; opacity: 0; } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 </style>
 </head>
 <body>
 
-<!-- БРУТАЛЬНАЯ ЗАСТАВКА -->
-<section id="scr-splash">
+<!-- ЗАСТАВКА (123.png) -->
+<section id="scr-splash" class="splash-screen">
   <div class="splash-bg"></div>
   <div class="splash-content">
-    
     <div class="brutal-text splash-line-1">ОРГАНИЗАТОР</div>
     <div class="brutal-text splash-line-2">СК СКОРПИОН</div>
     <div class="brutal-text splash-line-3">ЧАТ СТРАЙКБОЛ СОЧИ ПУЛЬС</div>
-    
     <div class="pulse-container">
       <svg class="pulse-svg" viewBox="0 0 400 80" preserveAspectRatio="none">
         <path class="pulse-path" d="M 0,40 L 60,40 L 80,40 L 95,10 L 110,70 L 125,40 L 180,40 L 200,40 L 215,5 L 230,75 L 245,40 L 300,40 L 320,40 L 335,20 L 350,60 L 365,40 L 400,40" />
       </svg>
     </div>
-    
   </div>
 </section>
 
@@ -1629,7 +1584,7 @@
   setTimeout(() => {
     $('scr-splash').classList.add('hide');
     show('scr-role');
-  }, 5000); // Заставка держится 5 секунд для полного эффекта
+  }, 5000);
 
 </script>
 </body>
