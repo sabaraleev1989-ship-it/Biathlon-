@@ -60,20 +60,20 @@
   .btn:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);box-shadow:none;}
   .row{display:flex;gap:10px} .row>*{flex:1}
 
-  /* ============ MAIN MENU (С ФОНОМ 12.PNG) ============ */
+  /* ============ MAIN MENU ============ */
   #scr-role {
     background-image: url('12.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
     min-height: 100vh;
-    margin: -14px; /* Компенсируем паддинг родителя */
+    margin: -14px;
     padding: 14px;
     position: relative;
   }
   #scr-role::before {
     content: ""; position: absolute; inset: 0;
-    background: rgba(10,5,5,0.75); /* Затемнение, чтобы кнопки читались */
+    background: rgba(10,5,5,0.75);
     z-index: 0;
   }
   #scr-role > * { position: relative; z-index: 1; }
@@ -317,6 +317,22 @@
   </div>
 </div>
 
+<!-- МОДАЛЬНОЕ ОКНО НАСТРОЕК -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-box">
+    <div class="modal-title">Настройки доступа</div>
+    
+    <label>Пароль для обычных судей</label>
+    <input id="set-judge-password" placeholder="Введите новый пароль" />
+    <p class="muted" style="margin-top:4px;font-size:10px">Этот пароль будут запрашивать у судей на этапах.</p>
+
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeSettingsModal()">Отмена</button>
+      <button class="btn primary" onclick="saveSettings()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <!-- МОДАЛЬНОЕ ОКНО ЧАТА -->
 <div class="radio-modal" id="radio-modal">
   <div class="radio-window">
@@ -414,6 +430,10 @@
       <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small id="mj-name-display">ПОЛНЫЙ ДОСТУП</small></div></div>
       <button class="back-btn" onclick="logoutMainJudge()" title="Выйти" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
+
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn ghost" style="padding:10px;font-size:12px" onclick="openSettingsModal()">⚙️ Настройки паролей</button>
+    </div>
 
     <div class="card">
       <h2>Регистрация и запуск</h2>
@@ -721,7 +741,7 @@
   }
 
   /* ============================================================
-     4. РЕГИСТРАЦИЯ НА ТУРНИР
+     4. РЕГИСТРАЦИЯ И НАСТРОЙКИ
      ============================================================ */
   
   window.openRegistration = function() {
@@ -749,6 +769,33 @@
       show('scr-role');
     } catch(e) {
       toast('Ошибка отправки', 'err');
+    }
+  }
+
+  // Настройки (Только для Главного судьи)
+  window.openSettingsModal = function() {
+    // Загружаем текущий пароль судьи из базы (или ставим дефолтный)
+    onValue(ref(db, 'settings/judge_password'), (snap) => {
+      const pwd = snap.val() || 'judge2026';
+      $('set-judge-password').value = pwd;
+      $('settings-modal').classList.add('on');
+    }, { onlyOnce: true });
+  }
+
+  window.closeSettingsModal = function() {
+    $('settings-modal').classList.remove('on');
+  }
+
+  window.saveSettings = async function() {
+    const newPwd = $('set-judge-password').value.trim();
+    if (!newPwd) { toast('Пароль не может быть пустым', 'err'); return; }
+
+    try {
+      await set(ref(db, 'settings/judge_password'), newPwd);
+      toast('Пароль для судей обновлен!', 'ok');
+      closeSettingsModal();
+    } catch(e) {
+      toast('Ошибка сохранения', 'err');
     }
   }
 
@@ -1073,7 +1120,7 @@
         reason: reason,
         judgeName: currentJudgeName || 'Судья',
         timeStr: getTimeNow(),
-        stageIdx: data.stageIdx // Привязываем штраф к текущему этапу участника!
+        stageIdx: data.stageIdx
       };
       
       await update(ref(db, `races/${currentPenaltyTargetId}/penalties/${penaltyId}`), newPenalty);
@@ -1201,11 +1248,12 @@
   }
 
   /* ============================================================
-     8. СУДЬЯ НА ЭТАПЕ
+     8. СУДЬЯ НА ЭТАПЕ (С ПАРОЛЕМ)
      ============================================================ */
   let judgeStage = null;
 
-  window.promptJudgeLogin = function() {
+  window.promptJudgeLogin = async function() {
+    // Проверяем, сохранен ли пароль на этом устройстве
     if (sessionStorage.getItem('judge_name') && sessionStorage.getItem('judge_stage')) {
       currentJudgeName = sessionStorage.getItem('judge_name');
       judgeStage = parseInt(sessionStorage.getItem('judge_stage'));
@@ -1213,15 +1261,25 @@
       openJudgeMode();
       return;
     }
-    
+
+    // Если нет, просим имя и пароль
     const name = prompt('Введите ваше имя/позывной:');
     if (!name) return;
-    
-    sessionStorage.setItem('judge_name', name);
-    currentJudgeName = name;
-    $('judge-name-display').textContent = currentJudgeName;
-    
-    openJudgeMode(true);
+
+    try {
+      const snap = await new Promise(res => onValue(ref(db, 'settings/judge_password'), res, { onlyOnce: true }));
+      const correctPwd = snap.val() || 'judge2026';
+      
+      const pwd = prompt('Введите пароль судьи:');
+      if (pwd === correctPwd) {
+        sessionStorage.setItem('judge_name', name);
+        currentJudgeName = name;
+        $('judge-name-display').textContent = currentJudgeName;
+        openJudgeMode(true);
+      } else if (pwd !== null) {
+        toast('Неверный пароль судьи!', 'err');
+      }
+    } catch(e) { toast('Ошибка сети', 'err'); }
   }
 
   window.logoutJudge = function() {
