@@ -357,7 +357,64 @@
       <div style="height:16px"></div>
       <button class="btn blue" onclick="promptMainJudge()" style="margin-bottom:10px">📋 ГЛАВНЫЙ СУДЬЯ (СТАРТ/ФИНИШ)</button>
       <button class="btn ghost" onclick="promptJudgeLogin()" style="margin-bottom:10px">👮 СУДЬЯ НА ЭТАПЕ</button>
-      <button class="btn primary" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
+      <button class="btn primary" onclick="openRegistration()" style="margin-bottom:10px">📝 РЕГИСТРАЦИЯ НА ТУРНИР</button>
+      <button class="btn green" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
+    </div>
+  </section>
+
+  <!-- REGISTRATION -->
+  <section id="scr-registration" class="screen">
+    <header>
+      <button class="back-btn" onclick="show('scr-role')">←</button>
+      <div class="brand"><span class="sc">🦂</span><div>ЗАЯВКА<small>ПРЕДВАРИТЕЛЬНАЯ РЕГИСТРАЦИЯ</small></div></div>
+      <div style="width:40px"></div>
+    </header>
+    <div class="card">
+      <h2>Оставить заявку</h2>
+      <p class="muted">Заполните данные, чтобы организаторы знали, сколько участников придет.</p>
+      
+      <label>ФИО</label>
+      <input id="reg-fio" placeholder="Иванов Иван" />
+      
+      <label>Команда</label>
+      <input id="reg-team" placeholder="Название команды" />
+      
+      <div style="height:16px"></div>
+      <button class="btn green" onclick="submitRegistration()">✅ ОТПРАВИТЬ ЗАЯВКУ</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
+    </div>
+  </section>
+
+  <!-- PARTICIPANT SELECT (LIST) -->
+  <section id="scr-participant-select" class="screen">
+    <header>
+      <button class="back-btn" onclick="show('scr-role')">←</button>
+      <div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>ВЫБЕРИТЕ СЕБЯ</small></div></div>
+      <div style="width:40px"></div>
+    </header>
+    <div class="card">
+      <h2>Список участников</h2>
+      <p class="muted">Найдите своё имя. Если вы уже бежали, нажмите, чтобы увидеть свои результаты.</p>
+      <div style="height:10px"></div>
+      <div id="participant-list"><p class="muted">Загрузка...</p></div>
+    </div>
+  </section>
+
+  <!-- PARTICIPANT RESULTS -->
+  <section id="scr-participant-results" class="screen">
+    <header>
+      <button class="back-btn" onclick="show('scr-participant-select')">←</button>
+      <div class="brand"><span class="sc">🦂</span><div id="pr-name">—<small id="pr-team">—</small></div></div>
+      <div style="width:40px"></div>
+    </header>
+    
+    <div class="card">
+      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Мой результат</h3>
+      <div id="pr-result-box">
+        <p class="muted">Загрузка...</p>
+      </div>
     </div>
   </section>
 
@@ -380,28 +437,18 @@
     </div>
 
     <div class="card" style="margin-top:12px">
-      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Управление забегом</h3>
+      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Предзаписи</h3>
+      <div id="pre-reg-list"><p class="muted">Загрузка...</p></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Бегуны на дистанции</h3>
       <div id="main-judge-list"><p class="muted">Нет активных забегов.</p></div>
     </div>
     
     <div class="row" style="margin-top:12px">
       <button class="btn ghost" onclick="showResults()">🏆 Таблица</button>
       <button class="btn danger" onclick="clearResults()">🗑️ Очистить</button>
-    </div>
-  </section>
-
-  <!-- PARTICIPANT SELECT -->
-  <section id="scr-participant-select" class="screen">
-    <header>
-      <button class="back-btn" onclick="show('scr-role')">←</button>
-      <div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>ВЫБЕРИТЕ СЕБЯ</small></div></div>
-      <div style="width:40px"></div>
-    </header>
-    <div class="card">
-      <h2>Кто вы?</h2>
-      <p class="muted">Выберите своё имя из списка тех, кого запустил Главный судья.</p>
-      <div style="height:10px"></div>
-      <div id="participant-list"><p class="muted">Ожидание старта...</p></div>
     </div>
   </section>
 
@@ -628,7 +675,6 @@
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
   });
 
-  // Отрисовка карты этапов с ЛАЙВОВЫМ таймером
   function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null) {
     if (!container) return;
     
@@ -699,7 +745,40 @@
   }
 
   /* ============================================================
-     4. РАЦИЯ (ЗАГРУЗКА НА TMPFILES.ORG)
+     4. РЕГИСТРАЦИЯ НА ТУРНИР
+     ============================================================ */
+  
+  window.openRegistration = function() {
+    show('scr-registration');
+  }
+
+  window.submitRegistration = async function() {
+    const fio = $('reg-fio').value.trim();
+    const team = $('reg-team').value.trim();
+    
+    if(!fio || !team) { toast('Заполните ФИО и команду', 'err'); return; }
+
+    try {
+      // Добавляем заявку в базу
+      const newRef = push(ref(db, 'pre_registrations'));
+      await set(newRef, {
+        fio, team,
+        time: Date.now(),
+        status: 'pending'
+      });
+      
+      $('reg-fio').value = '';
+      $('reg-team').value = '';
+      
+      toast('Заявка принята!', 'ok');
+      show('scr-role');
+    } catch(e) {
+      toast('Ошибка отправки', 'err');
+    }
+  }
+
+  /* ============================================================
+     5. РАЦИЯ
      ============================================================ */
   
   async function initMicrophone() {
@@ -800,7 +879,6 @@
     } catch(e) { toast('Ошибка отправки', 'err'); }
   }
 
-  // PTT (Нажал-Записал-Нажал)
   const btnPtt = $('btn-ptt');
   
   btnPtt.addEventListener('click', async (e) => {
@@ -847,7 +925,6 @@
       const json = await response.json();
       
       if (json.data && json.data.url) {
-        // Меняем страницу просмотра на прямую ссылку на файл
         const directUrl = json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
         
         await push(ref(db, 'radio_messages'), {
@@ -868,7 +945,7 @@
   }
 
   /* ============================================================
-     5. ГЛАВНЫЙ СУДЬЯ
+     6. ГЛАВНЫЙ СУДЬЯ
      ============================================================ */
   window.promptMainJudge = function() {
     if (sessionStorage.getItem('mj_auth') === 'true') {
@@ -903,12 +980,59 @@
   window.openMainJudge = function() {
     show('scr-main-judge');
     listenMainJudgeRaces();
+    listenPreRegistrations(); // Подписка на предзаписи
     startMJTimer();
     updateConnectionStatus(navigator.onLine);
     requestWakeLock();
     
     $('radio-fab').style.display = 'flex';
     onValue(ref(db, 'radio_messages'), renderRadioChat);
+  }
+
+  // Слушаем предзаписи
+  function listenPreRegistrations() {
+    onValue(ref(db, 'pre_registrations'), (snap) => {
+      const data = snap.val() || {};
+      const list = Object.entries(data).sort((a,b) => a[1].time - b[1].time);
+      const box = $('pre-reg-list');
+      
+      if (!list.length) { box.innerHTML = '<p class="muted">Пока нет заявок.</p>'; return; }
+      
+      box.innerHTML = `<p class="muted" style="margin-bottom:8px">Всего заявок: <b>${list.length}</b></p>`;
+      
+      list.forEach(([id, r]) => {
+        const div = document.createElement('div');
+        div.className = 'judge-item';
+        div.innerHTML = `
+          <div class="info" style="flex:1">
+            <div class="name">${r.fio}</div>
+            <div class="meta">${r.team}</div>
+          </div>
+          <button class="btn-mini act-green" onclick="startFromPreReg('${id}', '${r.fio}', '${r.team}')">НА СТАРТ</button>
+        `;
+        box.appendChild(div);
+      });
+    });
+  }
+
+  window.startFromPreReg = async function(id, fio, team) {
+    // Удаляем из предзаписей и запускаем забег
+    try {
+      await remove(ref(db, 'pre_registrations/' + id));
+      
+      const raceId = 'user_' + Date.now();
+      await set(ref(db, 'races/' + raceId), {
+        id: raceId, fio, team,
+        startAt: Date.now(),
+        pausedTotal: 0,
+        pauseStartedAt: null,
+        stageIdx: 0,
+        stageStartedAt: Date.now(),
+        status: 'running'
+      });
+      
+      toast('Участник запущен!', 'ok');
+    } catch(e) { toast('Ошибка', 'err'); }
   }
 
   window.registerAndStart = async function() {
@@ -1092,7 +1216,7 @@
         await update(ref(db, 'races/' + id), {
           pausedTotal: (data.pausedTotal || 0) + pausedMs,
           pauseStartedAt: null,
-          stageStartedAt: Date.now() // При возобновлении таймер этапа начинается заново с 0
+          stageStartedAt: Date.now()
         });
         toast('▶ Таймер продолжен, этап начат заново', 'ok');
       } else {
@@ -1121,124 +1245,82 @@
   }
 
   /* ============================================================
-     6. УЧАСТНИК
+     7. УЧАСТНИК
      ============================================================ */
   window.openParticipantMode = function() {
     show('scr-participant-select');
+    listenParticipantList();
+  }
+
+  function listenParticipantList() {
     onValue(ref(db, 'races'), (snap) => {
       const data = snap.val() || {};
-      const active = Object.values(data).filter(r => r.status === 'running');
+      const activeAndFinished = Object.values(data).sort((a,b) => a.startAt - b.startAt);
       const box = $('participant-list');
       
-      if (!active.length) { box.innerHTML = '<p class="muted">Ожидание старта от Главного судьи...</p>'; return; }
+      if (!activeAndFinished.length) { box.innerHTML = '<p class="muted">Пока нет участников.</p>'; return; }
       
       box.innerHTML = '';
-      active.forEach(r => {
+      activeAndFinished.forEach(r => {
+        const statusText = r.status === 'finished' ? 'Завершил' : 'Бежит';
+        const statusColor = r.status === 'finished' ? 'var(--green)' : 'var(--red)';
+        
         const div = document.createElement('div');
         div.className = 'judge-item';
         div.innerHTML = `
           <div class="info">
             <div class="name">${r.fio}</div>
-            <div class="meta">${r.team}</div>
+            <div class="meta">${r.team} · <span style="color:${statusColor}">${statusText}</span></div>
           </div>
-          <button class="btn-mini act" onclick="startParticipantRace('${r.id}')">НА СТАРТ</button>
+          <button class="btn-mini act" onclick="showParticipantResults('${r.id}')">👁 ОТКРЫТЬ</button>
         `;
         box.appendChild(div);
       });
     });
   }
 
-  window.startParticipantRace = function(id) {
-    currentParticipantId = id;
-    state = null; 
-    show('scr-race');
-    requestWakeLock();
+  window.showParticipantResults = function(id) {
+    show('scr-participant-results');
     
     onValue(ref(db, 'races/' + id), (snap) => {
       const data = snap.val();
       if(!data) return;
       
-      if (state === null) {
-        state = { id, fio: data.fio, team: data.team, stageIdx: data.stageIdx };
-        $('race-name').textContent = data.fio;
-        $('race-meta').textContent = data.team;
-        buildParticipantStageMap(data.laps || {}, data.stageStartedAt); 
-        renderStage();
-        startLocalTimer();
-      }
+      $('pr-name').textContent = data.fio;
+      $('pr-team').textContent = data.team;
       
-      localStartAt = data.startAt;
-      localPausedTotal = data.pausedTotal || 0;
-      localPauseStartedAt = data.pauseStartedAt;
+      let totalPenalty = 0;
+      if (data.penalties) Object.values(data.penalties).forEach(p => totalPenalty += p.sec);
       
-      if (data.status === 'finished') {
-        finishRunLocal(data.cleanMs);
-        return;
-      }
-
-      if (data.stageIdx > state.stageIdx) {
-        state.stageIdx = data.stageIdx;
-        if (state.stageIdx >= STAGES.length) {
-          toast('Вы на финише!', 'ok');
-        } else {
-          buildParticipantStageMap(data.laps || {}, data.stageStartedAt); 
-          renderStage();
-          toast('✅ Этап засчитан!', 'ok');
-          if(navigator.vibrate) navigator.vibrate([50, 100, 50]);
-        }
-      }
+      const timeMs = data.status === 'finished' 
+        ? data.totalMs 
+        : calcMs(data.startAt, data.pausedTotal, data.pauseStartedAt);
+      
+      let resHtml = `
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:40px;font-family:var(--mono);color:var(--green);font-weight:bold">${fmtShort(timeMs)}</div>
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:4px">${data.status === 'finished' ? 'Итоговое время' : 'Текущее время'}</div>
+          <div style="margin-top:8px;color:var(--red);font-size:12px">Штраф: +${totalPenalty}с</div>
+        </div>
+        
+        <h4 style="font-size:11px;color:var(--red);text-transform:uppercase;margin-bottom:8px">Ваши этапы</h4>
+        <div class="stages-map" id="pr-stages-map"></div>
+        
+        <h4 style="font-size:11px;color:var(--red);text-transform:uppercase;margin-top:16px;margin-bottom:8px">Ваши штрафы</h4>
+        <div class="penalty-list" id="pr-penalties"></div>
+      `;
+      
+      $('pr-result-box').innerHTML = resHtml;
+      
+      // Рисуем этапы без живого таймера (просто статика)
+      const isPaused = !!data.pauseStartedAt;
+      renderStagesMap(document.getElementById('pr-stages-map'), data.stageIdx, data.laps || {}, null);
+      renderPenalties(document.getElementById('pr-penalties'), data.penalties, false);
     });
   }
 
-  function buildParticipantStageMap(laps, stageStartedAt) {
-    renderStagesMap($('participant-stages-map'), state.stageIdx, laps, stageStartedAt);
-  }
-
-  function startLocalTimer() {
-    cancelAnimationFrame(timerRAF);
-    const tick = () => {
-      if(!state) return;
-      
-      const isPaused = !!localPauseStartedAt;
-      const el = $('timer');
-      
-      if (isPaused) {
-        el.classList.add('paused');
-        $('timer-status').textContent = '⏸ ПАУЗА';
-      } else {
-        el.classList.remove('paused');
-        $('timer-status').textContent = 'ОБЩЕЕ ВРЕМЯ';
-      }
-
-      const ms = calcMs(localStartAt, localPausedTotal, localPauseStartedAt);
-      el.innerHTML = fmt(ms);
-      
-      timerRAF = requestAnimationFrame(tick);
-    };
-    tick();
-  }
-
-  function renderStage() {
-    if(state.stageIdx >= STAGES.length) return;
-    const st = STAGES[state.stageIdx];
-    $('badge').innerHTML = `${st.ico} ЭТАП ${state.stageIdx + 1}`;
-    $('st-title').textContent = st.title;
-    $('st-desc').textContent = 'Ожидайте отметки судьи.';
-    $('wait-judge').style.display = 'block';
-    $('step-lbl').textContent = `ЭТАП ${Math.min(state.stageIdx + 1, STAGES.length)} / ${STAGES.length}`;
-  }
-
-  function finishRunLocal(cleanMs) {
-    cancelAnimationFrame(timerRAF);
-    $('timer').innerHTML = fmt(cleanMs);
-    $('timer-status').textContent = '🏁 ФИНИШ';
-    $('timer').classList.remove('paused');
-    toast('🏁 ФИНИШ! Ваше время: ' + fmtShort(cleanMs), 'ok');
-    releaseWakeLock();
-  }
-
   /* ============================================================
-     7. СУДЬЯ НА ЭТАПЕ (С БЛОКИРОВКОЙ ЭТАПА)
+     8. СУДЬЯ НА ЭТАПЕ
      ============================================================ */
   let judgeStage = null;
 
@@ -1415,13 +1497,12 @@
       const snap = await new Promise(res => onValue(ref(db, 'races/' + participantId), res, { onlyOnce: true }));
       const data = snap.val();
       
-      // Считаем время, затраченное на этот этап
       const lapTimeMs = Date.now() - (data.stageStartedAt || data.startAt);
       
       await update(ref(db, 'races/' + participantId), {
         [`laps/${stageIdx}`]: lapTimeMs,
         stageIdx: stageIdx + 1,
-        stageStartedAt: Date.now() // Сброс таймера для нового этапа
+        stageStartedAt: Date.now()
       });
       
       toast(`✅ Этап "${st.short}" засчитан!`, 'ok');
@@ -1430,7 +1511,7 @@
   }
 
   /* ============================================================
-     8. РЕЗУЛЬТАТЫ И ОЧИСТКА
+     9. РЕЗУЛЬТАТЫ И ОЧИСТКА
      ============================================================ */
   function renderFilters(finishedList) {
     const box = $('results-filter');
@@ -1504,7 +1585,6 @@
 
     finished.sort((a,b) => a.totalMs - b.totalMs);
     
-    // Формируем CSV контент через Blob
     let csvContent = "\uFEFF"; // BOM для Excel
     let header = "Место;ФИО;Команда;Итоговое время;Штрафы (сек)";
     STAGES.forEach(st => { header += `;${st.short}`; });
@@ -1526,7 +1606,6 @@
       csvContent += row;
     });
 
-    // Создаем файл через Blob
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
@@ -1542,12 +1621,14 @@
   }
 
   window.clearResults = async function() {
-    if(!confirm('Очистить ВСЕ данные (и завершенные, и активные забеги)?')) return;
+    if(!confirm('Очистить ВСЕ данные (и завершенные, и активные забеги, и предзаписи)?')) return;
     try {
       await remove(ref(db, 'races'));
+      await remove(ref(db, 'pre_registrations'));
       toast('Все данные очищены', 'ok');
       if ($('scr-main-judge').classList.contains('on')) {
         $('main-judge-list').innerHTML = '<p class="muted">Нет активных забегов.</p>';
+        $('pre-reg-list').innerHTML = '<p class="muted">Пока нет заявок.</p>';
       }
       if ($('scr-results').classList.contains('on')) {
         $('tables').innerHTML = '<p class="muted">Нет данных.</p>';
@@ -1556,7 +1637,7 @@
   }
 
   /* ============================================================
-     9. СТАРТ ПРИЛОЖЕНИЯ
+     10. СТАРТ ПРИЛОЖЕНИЯ
      ============================================================ */
   setTimeout(() => {
     $('scr-splash').classList.add('hide');
