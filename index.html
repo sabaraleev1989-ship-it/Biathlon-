@@ -21,10 +21,17 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;}
   body{
-    background:var(--bg);
+    background-color: var(--bg);
+    background-image: url('12.png'); /* Глобальный фон для всего приложения */
+    background-size: cover;
+    background-position: center top;
+    background-attachment: fixed;
     color:var(--txt);font-family:var(--sans);overscroll-behavior:none;user-select:none;overflow:hidden;
   }
-  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.35;background-image:repeating-linear-gradient(0deg,rgba(255,45,45,.03) 0 1px,transparent 1px 3px);mix-blend-mode:overlay;}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+    background: rgba(10,5,5,0.8); /* Затемнение, чтобы текст читался */
+  }
   
   .app{
     max-width:520px;margin:0 auto;
@@ -35,13 +42,13 @@
     display:flex; flex-direction:column;
   }
   
-  /* ИСПРАВЛЕНО: display: block для экранов, чтобы они не накладывались */
-  .screen{display:none;animation:fade .35s cubic-bezier(.22,.9,.3,1); flex: 1; height: 100%; overflow-y: auto;}
-  .screen.on{display:block;} 
-  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  /* ОСНОВНОЙ ФИКС: display: none полностью скрывает страницу */
+  .screen{display:none; flex: 1; height: 100%; overflow-y: auto; animation: fade .3s ease;}
+  .screen.on{display:flex; flex-direction:column;}
+  @keyframes fade{from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:none;}}
 
   /* ============ HEADER ============ */
-  header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px; flex-shrink: 0;}
   .brand{display:flex;align-items:center;gap:8px;font-weight:900;letter-spacing:.8px;font-size:14px}
   .brand .sc{font-size:22px;filter:drop-shadow(0 0 10px var(--red-glow));animation:scorpionPulse 2.4s infinite}
   @keyframes scorpionPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
@@ -50,7 +57,7 @@
   .back-btn{width:auto;padding:9px 14px;font-size:18px;color:var(--txt);background:var(--panel);border:1px solid var(--line2);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
   .back-btn:active{transform:scale(.95)}
 
-  .card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:0 10px 30px -18px #000; margin-bottom: 10px;}
+  .card{background:linear-gradient(160deg,rgba(23,10,10,0.9),rgba(31,13,13,0.9));border:1px solid var(--line);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:0 10px 30px -18px #000; margin-bottom: 10px;}
   .card::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--red),transparent);opacity:.55;}
   .muted{color:var(--dim);font-size:11.5px;line-height:1.4}
   h2{margin:0 0 8px;font-size:16px;font-weight:800}
@@ -73,25 +80,8 @@
 
   /* ============ MAIN MENU ============ */
   #scr-role {
-    background-image: url('12.png');
-    background-size: cover;
-    background-position: center top;
-    margin: -10px -14px;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    position: relative;
-    height: calc(100% + 20px);
-    overflow: hidden;
+    justify-content: space-between; /* Меню наверх, футер вниз */
   }
-  #scr-role::before {
-    content: ""; position: absolute; inset: 0;
-    background: rgba(10,5,5,0.75);
-    z-index: 0;
-  }
-  #scr-role > * { position: relative; z-index: 1; }
-  
   .menu-top {
     display: flex;
     flex-direction: column;
@@ -450,7 +440,7 @@
 </div>
 
 <div class="app">
-  <!-- ROLE SELECT -->
+  <!-- ROLE SELECT (ГЛАВНЫЙ ЭКРАН) -->
   <section id="scr-role" class="screen on">
     <div class="menu-top">
       <header><div class="brand"><span class="sc">🦂</span><div>РЕЖИМ РАБОТЫ<small>ВЫБЕРИТЕ РОЛЬ</small></div></div></header>
@@ -486,9 +476,9 @@
   <!-- REGISTRATION -->
   <section id="scr-registration" class="screen">
     <header>
-      <button class="back-btn" onclick="show('scr-role')">←</button>
+      <button class="back-btn" onclick="show('scr-role')">← Назад</button>
       <div class="brand"><span class="sc">🦂</span><div>ЗАЯВКА<small>ПРЕДВАРИТЕЛЬНАЯ РЕГИСТРАЦИЯ</small></div></div>
-      <div style="width:40px"></div>
+      <div style="width:80px"></div>
     </header>
     <div class="card">
       <h2>Оставить заявку</h2>
@@ -503,17 +493,14 @@
       <div style="height:16px"></div>
       <button class="btn green" onclick="submitRegistration()">✅ ОТПРАВИТЬ ЗАЯВКУ</button>
     </div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn ghost" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
-    </div>
   </section>
 
   <!-- PARTICIPANT SELECT (LIST) -->
   <section id="scr-participant-select" class="screen">
     <header>
-      <button class="back-btn" onclick="show('scr-role')">←</button>
-      <div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>ВЫБЕРИТЕ СЕБЯ</small></div></div>
-      <div style="width:40px"></div>
+      <button class="back-btn" onclick="show('scr-role')">← Назад</button>
+      <div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>СПИСОК</small></div></div>
+      <div style="width:80px"></div>
     </header>
     <div class="card">
       <h2>Список участников</h2>
@@ -526,9 +513,9 @@
   <!-- PARTICIPANT RESULTS -->
   <section id="scr-participant-results" class="screen">
     <header>
-      <button class="back-btn" onclick="show('scr-participant-select')">←</button>
+      <button class="back-btn" onclick="show('scr-participant-select')">← Назад</button>
       <div class="brand"><span class="sc">🦂</span><div id="pr-name">—<small id="pr-team">—</small></div></div>
-      <div style="width:40px"></div>
+      <div style="width:80px"></div>
     </header>
     
     <div class="card">
@@ -542,7 +529,7 @@
   <!-- MAIN JUDGE -->
   <section id="scr-main-judge" class="screen">
     <header>
-      <button class="back-btn" onclick="show('scr-role')">←</button>
+      <button class="back-btn" onclick="show('scr-role')">← Назад</button>
       <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small id="mj-name-display">ПОЛНЫЙ ДОСТУП</small></div></div>
       <button class="back-btn" onclick="logoutMainJudge()" title="Выйти" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
@@ -580,9 +567,9 @@
   <!-- RACE (Participant) -->
   <section id="scr-race" class="screen">
     <header>
-      <button class="back-btn" onclick="location.reload()">←</button>
+      <button class="back-btn" onclick="location.reload()">← Назад</button>
       <div class="brand"><span class="sc">🦂</span><div><span id="race-name">—</span><small id="race-meta">—</small></div></div>
-      <div style="width:40px"></div>
+      <div style="width:80px"></div>
     </header>
     <div class="card">
       <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
@@ -613,7 +600,7 @@
   <!-- JUDGE -->
   <section id="scr-judge" class="screen">
     <header>
-      <button class="back-btn" onclick="show('scr-role')">←</button>
+      <button class="back-btn" onclick="show('scr-role')">← Назад</button>
       <div class="brand"><span class="sc">🦂</span><div>СУДЬЯ<small id="judge-name-display">ПАНЕЛЬ ЭТАПА</small></div></div>
       <button class="back-btn" onclick="logoutJudge()" title="Выйти" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
@@ -637,9 +624,9 @@
   <!-- RESULTS -->
   <section id="scr-results" class="screen">
     <header>
-      <button class="back-btn" onclick="location.reload()">←</button>
+      <button class="back-btn" onclick="location.reload()">← Назад</button>
       <div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>ПРОТОКОЛ</small></div></div>
-      <div style="width:40px"></div>
+      <div style="width:80px"></div>
     </header>
     
     <div class="card" style="padding: 8px;">
