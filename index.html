@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0505'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='%23ff2d2d'>🦂</text></svg>" />
 <style>
   :root{
-    --bg:#0a0505; --panel:#170a0a; --panel2:#1f0d0d;
+    --bg:#0a0505; --bg2:#140808; --panel:#170a0a; --panel2:#1f0d0d;
     --line:#3a1414; --line2:#4d1a1a;
     --txt:#f4e8e6; --dim:#a47d7d; --dim2:#6e4a4a;
     --red:#ff2d2d; --red-d:#c41a1a; --red-glow:rgba(255,45,45,.55);
@@ -22,11 +22,17 @@
     background:radial-gradient(900px 500px at 50% -8%,#2a0a0a 0%,transparent 60%),var(--bg);
     color:var(--txt);font-family:var(--sans);overscroll-behavior:none;user-select:none;overflow-x:hidden;
   }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.35;
+    background-image:repeating-linear-gradient(0deg,rgba(255,45,45,.03) 0 1px,transparent 1px 3px);
+    mix-blend-mode:overlay;
+  }
   .app{max-width:520px;margin:0 auto;padding:14px 14px calc(24px + env(safe-area-inset-bottom));min-height:100%;position:relative;z-index:2}
   .screen{display:none;animation:fade .35s cubic-bezier(.22,.9,.3,1)}
   .screen.on{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
+  /* ============ HEADER ============ */
   header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.8px;font-size:15px}
   .brand .sc{font-size:24px;filter:drop-shadow(0 0 10px var(--red-glow));animation:scorpionPulse 2.4s infinite}
@@ -50,6 +56,7 @@
   .btn:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);box-shadow:none;}
   .row{display:flex;gap:10px} .row>*{flex:1}
 
+  /* ============ TIMER ============ */
   .timer{font-family:var(--mono);font-size:clamp(42px,13vw,60px);font-weight:900;letter-spacing:1px;line-height:1;color:var(--txt);text-align:center;margin:16px 0 6px;}
   .timer .ms{font-size:.45em;color:var(--red)}
   .timer.label{font-size:10.5px;letter-spacing:4px;color:var(--dim);font-weight:700;text-align:center}
@@ -64,6 +71,7 @@
   .stage-desc{color:var(--dim);font-size:13px;margin-bottom:14px}
   .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px;}
   
+  /* ============ JUDGE LIST ============ */
   .judge-item{display:flex;align-items:center;justify-content:space-between;background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;transition:.2s}
   .judge-item.ready{border-color:var(--red);box-shadow:0 0 14px -4px var(--red-glow)}
   .judge-item.done{border-color:var(--green);opacity:.6}
@@ -75,6 +83,7 @@
   .judge-btn.green{background:var(--green);color:#000}
   .judge-btn:disabled{background:#1a0d0d;color:var(--dim);cursor:not-allowed;}
 
+  /* ============ RESULTS ============ */
   table{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
   th{text-align:left;font-size:10px;color:var(--red);letter-spacing:1px;text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--line2);}
   td{padding:10px 6px;border-bottom:1px solid #240b0b;font-family:var(--mono);font-size:13px}
@@ -86,25 +95,88 @@
   .toast.err{border-color:var(--red);background:#2a0808}
   .toast.ok{border-color:var(--green);background:#0a2a10}
 
-  #scr-splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .5s}
-  #scr-splash.hide{opacity:0;pointer-events:none}
-  .splash-title{font-size:30px;font-weight:900;letter-spacing:3px;margin-top:8px;color:#fff;text-align:center}
+  /* ============ SPLASH (ВОЗВРАЩЕН) ============ */
+  #scr-splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 42%,#1f0707 0%,#0a0505 55%,#000 100%);overflow:hidden;
+    transition:opacity .5s ease, visibility .5s ease;}
+  #scr-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
+  .splash-inner{position:relative;width:100%;max-width:440px;padding:20px;text-align:center}
+  
+  .crawl-scorpion{position:absolute;font-size:30px;filter:drop-shadow(0 0 12px var(--red-glow));opacity:.9;animation:scorpWalk 7s ease-in-out infinite}
+  .crawl-scorpion.b{bottom:12%;right:-10%;animation-delay:1.4s;font-size:26px;animation-duration:8.5s}
+  .crawl-scorpion.c{top:42%;right:-14%;animation-delay:3s;font-size:20px;animation-duration:10s;opacity:.6}
+  @keyframes scorpWalk{
+    0%{transform:translate(0,0) rotate(-8deg)}
+    25%{transform:translate(40px,-18px) rotate(6deg)}
+    50%{transform:translate(90px,10px) rotate(-6deg)}
+    75%{transform:translate(40px,20px) rotate(8deg)}
+    100%{transform:translate(0,0) rotate(-8deg)}
+  }
+  
+  .splash-logo{font-size:88px;line-height:1;filter:drop-shadow(0 0 28px var(--red-glow));animation:logoPulse 2.2s ease-in-out infinite}
+  @keyframes logoPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  .splash-title{
+    font-size:30px;font-weight:900;letter-spacing:3px;margin-top:8px;
+    background:linear-gradient(180deg,#fff,#ff5555);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    text-shadow:0 0 30px rgba(255,45,45,.35);
+    animation:titleIn .9s cubic-bezier(.2,.9,.3,1) both;
+  }
+  @keyframes titleIn{from{opacity:0;transform:translateY(14px) scale(.94);letter-spacing:8px}to{opacity:1;transform:none;letter-spacing:3px}}
+  .splash-sub{color:var(--dim);font-size:11px;letter-spacing:4px;margin-top:6px;text-transform:uppercase;animation:titleIn 1.1s .2s both}
+  .pulse-track{position:relative;height:60px;margin:26px auto 8px;max-width:360px;overflow:hidden}
+  .pulse-track svg{width:100%;height:100%;display:block}
+  .pulse-line{
+    fill:none;stroke:var(--red);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
+    filter:drop-shadow(0 0 6px var(--red-glow));
+    stroke-dasharray:600;stroke-dashoffset:600;
+    animation:pulseDraw 2.4s cubic-bezier(.6,0,.4,1) infinite;
+  }
+  @keyframes pulseDraw{0%{stroke-dashoffset:600;opacity:.4}40%{stroke-dashoffset:0;opacity:1}70%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:-600;opacity:.4}}
+  .pulse-runner{
+    position:absolute;top:50%;left:0;width:10px;height:10px;margin-top:-5px;border-radius:50%;
+    background:var(--red);box-shadow:0 0 14px 4px var(--red-glow);
+    animation:runner 2.4s cubic-bezier(.6,0,.4,1) infinite;
+  }
+  @keyframes runner{0%{left:0;opacity:.2}40%{left:calc(100% - 10px);opacity:1}70%{left:calc(100% - 10px);opacity:1}100%{left:0;opacity:.2}}
+  .splash-tag{margin-top:24px;display:flex;flex-direction:column;gap:6px;align-items:center;animation:titleIn 1.3s .4s both}
+  .splash-tag .org{font-size:12px;letter-spacing:2px;color:var(--txt);font-weight:700}
+  .splash-tag .org b{color:var(--red)}
+  .splash-tag .chat{font-size:11px;letter-spacing:2px;color:var(--dim)}
+  .splash-load{width:200px;height:3px;border-radius:2px;background:#2a0d0d;margin:22px auto 0;overflow:hidden}
+  .splash-load i{display:block;height:100%;width:40%;background:linear-gradient(90deg,transparent,var(--red),transparent);animation:loadBar 1.4s ease-in-out infinite}
+  @keyframes loadBar{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+  .splash-hint{position:absolute;bottom:26px;left:0;right:0;text-align:center;font-size:10px;color:var(--dim2);letter-spacing:2px;animation:blink 1.8s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:.3}50%{opacity:.9}}
 </style>
 </head>
 <body>
 
-<!-- SPLASH -->
+<!-- ================= SPLASH (ВОЗВРАЩЕН) ================= -->
 <section id="scr-splash">
-  <div style="text-align:center">
-    <div style="font-size:88px;filter:drop-shadow(0 0 28px var(--red-glow))">🦂</div>
+  <div class="splash-inner">
+    <div class="crawl-scorpion b">🦂</div>
+    <div class="crawl-scorpion c">🦂</div>
+    <div class="splash-logo">🦂</div>
     <div class="splash-title">SCORPION</div>
-    <div style="color:var(--dim);font-size:11px;letter-spacing:4px;margin-top:6px;text-transform:uppercase">TACTICAL BIATHLON</div>
-    <div style="color:var(--dim2);font-size:10px;margin-top:40px">ЗАГРУЗКА...</div>
+    <div class="splash-sub">TACTICAL BIATHLON</div>
+    <div class="pulse-track">
+      <svg viewBox="0 0 360 60" preserveAspectRatio="none">
+        <polyline class="pulse-line" points="0,30 40,30 55,30 65,10 78,50 90,30 120,30 140,30 155,8 168,52 180,30 220,30 240,30 255,14 268,46 280,30 320,30 360,30"/>
+      </svg>
+      <div class="pulse-runner"></div>
+    </div>
+    <div class="splash-tag">
+      <div class="org">ОРГАНИЗАТОР · <b>СК СКОРПИОН</b></div>
+      <div class="chat">ЧАТ · СТРАЙКБОЛ СОЧИ ПУЛЬС</div>
+    </div>
+    <div class="splash-load"><i></i></div>
+    <div class="splash-hint" style="pointer-events:none">ЗАГРУЗКА ТРАССЫ…</div>
   </div>
 </section>
 
 <div class="app">
-  <!-- ROLE SELECT -->
+  <!-- ================= ROLE SELECT ================= -->
   <section id="scr-role" class="screen">
     <header><div class="brand"><span class="sc">🦂</span><div>РЕЖИМ РАБОТЫ<small>ВЫБЕРИТЕ РОЛЬ</small></div></div></header>
     <div class="card">
@@ -116,7 +188,7 @@
     </div>
   </section>
 
-  <!-- START (Participant) -->
+  <!-- ================= START (Participant) ================= -->
   <section id="scr-start" class="screen">
     <header><div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>РЕГИСТРАЦИЯ</small></div></div></header>
     <div class="card">
@@ -134,7 +206,7 @@
     <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="showResults()">🏆 Результаты</button></div>
   </section>
 
-  <!-- RACE (Participant) -->
+  <!-- ================= RACE (Participant) ================= -->
   <section id="scr-race" class="screen">
     <header>
       <div class="brand"><span class="sc">🦂</span><div><span id="race-name">—</span><small id="race-meta">—</small></div></div>
@@ -165,7 +237,7 @@
     </div>
   </section>
 
-  <!-- JUDGE -->
+  <!-- ================= JUDGE ================= -->
   <section id="scr-judge" class="screen">
     <header>
       <div class="brand"><span class="sc">🦂</span><div>СУДЬЯ<small>ПАНЕЛЬ ЭТАПА</small></div></div>
@@ -188,7 +260,7 @@
     </div>
   </section>
 
-  <!-- FINISH -->
+  <!-- ================= FINISH ================= -->
   <section id="scr-finish" class="screen">
     <header><div class="brand"><span class="sc">🦂</span><div>ФИНИШ<small>РЕЗУЛЬТАТ</small></div></div></header>
     <div class="card" style="text-align:center;padding:30px 16px">
@@ -202,7 +274,7 @@
     </div>
   </section>
 
-  <!-- RESULTS -->
+  <!-- ================= RESULTS ================= -->
   <section id="scr-results" class="screen">
     <header><div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>ОНЛАЙН ПРОТОКОЛ</small></div></div></header>
     <div class="card">
@@ -232,7 +304,6 @@
     measurementId: "G-7YJRYDKJ0C"
   };
 
-  // Подключаем Firebase (только нужные модули, без аналитики для скорости)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -258,18 +329,19 @@
   let state = null;
   let timerRAF = null;
   let currentParticipantId = null;
-  let unsubListener = null;
 
   /* ============================================================
      3. УТИЛИТЫ
      ============================================================ */
-  const $ = id => document.getElementById(id);
-  function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on'); window.scrollTo(0,0); }
+  window.$ = id => document.getElementById(id);
+  window.show = function(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on'); window.scrollTo(0,0); }
+  
   let toastT = null;
-  function toast(msg, type='') {
+  window.toast = function(msg, type='') {
     const t = $('toast'); t.textContent = msg; t.className = 'toast on ' + type;
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3000);
   }
+  
   function fmt(ms){ if(ms<0) ms=0; const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), cs=Math.floor(ms%1000/10); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<span class="ms">.${String(cs).padStart(2,'0')}</span>`; }
   function fmtShort(ms){ const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
 
@@ -295,7 +367,6 @@
     $('race-name').textContent = fio;
     $('race-meta').textContent = team;
     
-    // Отправляем в Firebase
     try {
       await set(ref(db, 'races/' + currentParticipantId), {
         id: currentParticipantId, fio, team,
@@ -363,7 +434,7 @@
     if(!currentParticipantId) return;
     const raceRef = ref(db, 'races/' + currentParticipantId);
     
-    unsubListener = onValue(raceRef, (snap) => {
+    onValue(raceRef, (snap) => {
       const data = snap.val();
       if(!data) return;
       
@@ -457,7 +528,6 @@
     }
 
     box.innerHTML = '';
-    // Сортируем по времени старта
     runners.sort((a,b) => b.startAt - a.startAt).forEach(r => {
       const isDone = r.stageIdx > judgeStage;
       const isOnMyStage = r.stageIdx === judgeStage;
@@ -531,12 +601,12 @@
   }
 
   /* ============================================================
-     7. ИНИЦИАЛИЗАЦИЯ
+     7. ИНИЦИАЛИЗАЦИЯ ЗАСТАВКИ
      ============================================================ */
   setTimeout(() => {
     $('scr-splash').classList.add('hide');
     show('scr-role');
-  }, 2000);
+  }, 3000); // 3 секунды на заставку
 
 </script>
 </body>
