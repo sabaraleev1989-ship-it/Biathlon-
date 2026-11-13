@@ -492,7 +492,7 @@
 
 <script type="module">
   /* ============================================================
-     1. НАСТРОЙКА FIREBASE
+     1. НАСТРОЙКА FIREBASE (Без Storage)
      ============================================================ */
   const firebaseConfig = {
     apiKey: "AIzaSyDkqYJJ6t3DzhPN7U80UM9TcppSfpaeEJ4",
@@ -506,7 +506,7 @@
   };
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, set, onValue, remove, update, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, set, onValue, remove, update, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
@@ -648,19 +648,21 @@
   }
 
   /* ============================================================
-     4. РАЦИЯ (АУДИО + ТЕКСТ)
+     4. РАЦИЯ (СЖАТИЕ + БАЗА ДАННЫХ)
      ============================================================ */
   
   async function initMicrophone() {
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(mediaStream);
+      // Устанавливаем низкий битрейт для сжатия (экономия места в базе)
+      mediaRecorder = new MediaRecorder(mediaStream, { audioBitsPerSecond: 16000 });
       
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         audioChunks = [];
         await uploadVoiceMessage(audioBlob);
+        
         // Останавливаем поток, чтобы погасить системный значок микрофона
         if (mediaStream) {
           mediaStream.getTracks().forEach(track => track.stop());
@@ -699,14 +701,11 @@
     
     let hasNew = false;
     messages.forEach(m => {
-      if (m.time > lastMsgTime) {
-        hasNew = true;
-      }
+      if (m.time > lastMsgTime) hasNew = true;
     });
     
     if (hasNew) {
       lastMsgTime = Date.now();
-      // Вибрация для уведомления
       if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
     }
 
@@ -732,7 +731,6 @@
     });
     scrollChatToBottom();
 
-    // Если рация закрыта и есть новое — мигаем кнопкой
     if (!isRadioOpen && messages.length > 0) {
       $('radio-badge').style.display = 'block';
     }
@@ -761,7 +759,6 @@
     e.preventDefault();
     
     if (!isRecording) {
-      // НАЧАЛО ЗАПИСИ
       const ok = await initMicrophone();
       if (!ok) return;
       
@@ -774,12 +771,11 @@
       if(navigator.vibrate) navigator.vibrate(50);
       
     } else {
-      // КОНЕЦ ЗАПИСИ
       isRecording = false;
       btnPtt.classList.remove('recording');
       $('ptt-label').textContent = 'Отправка...';
       
-      mediaRecorder.stop(); // Вызовет onstop, который остановит трек
+      mediaRecorder.stop();
       
       setTimeout(() => {
         $('ptt-label').textContent = 'Нажмите, чтобы начать запись';
@@ -788,17 +784,17 @@
   });
 
   async function uploadVoiceMessage(blob) {
-    toast('Загрузка на сервер...', 'ok');
+    toast('Обработка аудио...', 'ok');
     try {
-      // Конвертируем аудио в Base64 и отправляем прямо в базу
       const reader = new FileReader();
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
         const base64Audio = reader.result;
         
+        // Отправляем в базу данных
         await push(ref(db, 'radio_messages'), {
           type: 'voice',
-          url: base64Audio, // Ссылка на base64 данные
+          url: base64Audio,
           author: currentJudgeName || 'Судья',
           time: Date.now(),
           timeStr: getTimeNow()
@@ -806,7 +802,8 @@
         toast('Отправлено!', 'ok');
       };
     } catch(e) {
-      toast('Ошибка загрузки аудио', 'err');
+      console.error(e);
+      toast('Ошибка!', 'err');
     }
   }
 
