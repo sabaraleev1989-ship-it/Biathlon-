@@ -102,13 +102,16 @@
   
   /* Визуализация этапов */
   .stages-map{display:flex; flex-direction:column; gap:6px; margin: 10px 0;}
-  .stage-row{display:flex; align-items:center; gap:8px; padding: 6px 10px; background: #120707; border-radius: 8px; border: 1px solid transparent; opacity: 0.5; transition: 0.3s;}
+  .stage-row{display:flex; align-items:center; gap:8px; padding: 6px 10px; background: #120707; border-radius: 8px; border: 1px solid transparent; opacity: 0.5; transition: 0.3s; position:relative;}
   .stage-row.done { opacity: 1; border-color: var(--green); background: #0c1a0f; }
   .stage-row.now { opacity: 1; border-color: var(--red); background: #1a0707; box-shadow: 0 0 10px -2px var(--red-glow); }
   .stage-row .ico { font-size: 16px; width: 20px; text-align: center;}
   .stage-row .nm { font-size: 12px; font-weight: 700; flex: 1;}
   .stage-row .st { font-size: 14px; font-weight: 900;}
   .stage-row .lap { font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: bold; width: 50px; text-align: right;}
+  
+  /* Бейдж штрафа на этапе */
+  .stage-pen { font-size: 10px; color: var(--red); font-weight: bold; background: rgba(255,45,45,0.15); padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
 
   .judge-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-mini{padding:14px 12px;border-radius:10px;font-weight:900;font-size:14px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px; min-height: 48px; text-align: center;}
@@ -171,9 +174,9 @@
   .filter-btn { background: #120707; border: 1px solid var(--line2); color: var(--dim); padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
   .filter-btn.on { background: var(--red-d); border-color: var(--red); color: #fff; }
 
-  table{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
+  table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
   th{text-align:left;font-size:10px;color:var(--red);letter-spacing:1px;text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--line2);}
-  td{padding:10px 6px;border-bottom:1px solid #240b0b;font-family:var(--mono);font-size:13px}
+  td{padding:10px 6px;border-bottom:1px solid #240b0b;font-family:var(--mono);font-size:12px;vertical-align:top;}
   td.nm{font-family:inherit;font-weight:700}
 
   .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:#1c0808;border:1px solid var(--red);color:var(--txt);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:9999;text-align:center;max-width:90%;}
@@ -187,7 +190,7 @@
   .modal-title{font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;color:var(--red);}
   .modal-actions{display:flex;gap:10px;margin-top:16px;}
 
-  /* ============ SPLASH (ОБНОВЛЕННЫЙ) ============ */
+  /* ============ SPLASH ============ */
   #scr-splash {
     position: fixed; inset: 0; z-index: 100;
     background-color: #000;
@@ -230,7 +233,6 @@
     animation: slideUp .8s cubic-bezier(.2,.9,.3,1) .6s both;
   }
 
-  /* Анимация пульса (прорисовка заново) */
   .pulse-container {
     height: 80px; width: 100%; margin-top: 10px; position: relative;
     animation: slideUp .8s cubic-bezier(.2,.9,.3,1) .9s both;
@@ -269,8 +271,6 @@
   <div class="splash-content">
     <div class="splash-org">ОРГАНИЗАТОР: <span>СК СКОРПИОН</span></div>
     <div class="splash-chat">ЧАТ: СТРАЙКБОЛ СОЧИ ПУЛЬС</div>
-    
-    <!-- Увеличенный и анимированный пульс -->
     <div class="pulse-container">
       <svg class="pulse-svg" viewBox="0 0 400 80" preserveAspectRatio="none">
         <path class="pulse-path" d="M 0,40 L 60,40 L 80,40 L 95,10 L 110,70 L 125,40 L 180,40 L 200,40 L 215,5 L 230,75 L 245,40 L 300,40 L 320,40 L 335,20 L 350,60 L 365,40 L 400,40" />
@@ -496,11 +496,11 @@
       <div style="width:40px"></div>
     </header>
     
-    <div class="card">
-      <div class="filter-bar" id="results-filter">
+    <div class="card" style="padding: 8px;">
+      <div class="filter-bar" id="results-filter" style="margin: 8px;">
         <button class="filter-btn on" onclick="filterResults('all')">Все</button>
       </div>
-      <div id="tables"><p class="muted">Загрузка данных...</p></div>
+      <div id="tables" style="overflow-x:auto;"><p class="muted" style="padding:10px;">Загрузка данных...</p></div>
     </div>
 
     <div class="row" style="margin-top:12px">
@@ -629,7 +629,8 @@
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
   });
 
-  function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null) {
+  // Отрисовка карты этапов с ЛАЙВОВЫМ таймером и ШТРАФАМИ
+  function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null, penalties = {}) {
     if (!container) return;
     
     if (container._timerRAF) cancelAnimationFrame(container._timerRAF);
@@ -641,6 +642,13 @@
         let stIco = '';
         let lapTimeStr = '';
         
+        // Считаем штрафы именно для этого этапа
+        let stagePenaltySum = 0;
+        Object.values(penalties).forEach(p => {
+          if (p.stageIdx === i) stagePenaltySum += p.sec;
+        });
+        const penHtml = stagePenaltySum > 0 ? `<span class="stage-pen">+${stagePenaltySum}с</span>` : '';
+
         if (i < currentStageIdx) { 
           cls = 'done'; stIco = '✅'; 
           lapTimeStr = laps[i] ? fmtLap(laps[i]) : '';
@@ -660,6 +668,7 @@
           <div class="stage-row ${cls}">
             <div class="ico">${st.ico}</div>
             <div class="nm">${st.short}</div>
+            ${penHtml}
             <div class="lap">${lapTimeStr}</div>
             <div class="st">${stIco}</div>
           </div>
@@ -682,10 +691,13 @@
     let html = '';
     Object.entries(penaltiesObj).forEach(([key, p]) => {
       const delBtn = canDelete ? `<button class="del-btn" onclick="deletePenalty('${event.target.closest('.judge-item').dataset.id}', '${key}')">✕</button>` : '';
+      const stageName = STAGES[p.stageIdx] ? STAGES[p.stageIdx].short : 'Общий';
+      
       html += `
         <div class="penalty-item">
           <div>
             <span class="reason">+${p.sec}с</span> · ${p.reason} <br>
+            <span style="font-size:10px;color:var(--dim)">Этап: ${stageName}</span><br>
             <span class="judge">${p.judgeName}</span>
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
@@ -1008,7 +1020,7 @@
       `;
       box.appendChild(div);
       
-      renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx, r.laps || {}, isPaused ? null : r.stageStartedAt);
+      renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx, r.laps || {}, isPaused ? null : r.stageStartedAt, r.penalties);
       renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties, true);
     });
     updateConnectionStatus(navigator.onLine);
@@ -1042,13 +1054,18 @@
     if (!sec || sec <= 0) { toast('Укажите секунды', 'err'); return; }
 
     try {
+      const snap = await new Promise(res => onValue(ref(db, 'races/' + currentPenaltyTargetId), res, { onlyOnce: true }));
+      const data = snap.val();
+      
       const penaltyId = 'p_' + Date.now();
       const newPenalty = {
         sec: sec,
         reason: reason,
         judgeName: currentJudgeName || 'Судья',
-        timeStr: getTimeNow()
+        timeStr: getTimeNow(),
+        stageIdx: data.stageIdx // Привязываем штраф к текущему этапу участника!
       };
+      
       await update(ref(db, `races/${currentPenaltyTargetId}/penalties/${penaltyId}`), newPenalty);
       toast(`Штраф +${sec}с добавлен!`, 'ok');
       closePenaltyModal();
@@ -1168,7 +1185,7 @@
       
       $('pr-result-box').innerHTML = resHtml;
       
-      renderStagesMap(document.getElementById('pr-stages-map'), data.stageIdx, data.laps || {}, null);
+      renderStagesMap(document.getElementById('pr-stages-map'), data.stageIdx, data.laps || {}, null, data.penalties);
       renderPenalties(document.getElementById('pr-penalties'), data.penalties, false);
     });
   }
@@ -1338,7 +1355,7 @@
       `;
       box.appendChild(div);
 
-      renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx, r.laps || {}, isPaused ? null : r.stageStartedAt);
+      renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx, r.laps || {}, isPaused ? null : r.stageStartedAt, r.penalties);
       renderPenalties(document.getElementById(`j-pen-${r.id}`), r.penalties, false);
     });
     updateConnectionStatus(navigator.onLine);
@@ -1387,6 +1404,7 @@
     renderFilters(finished);
   }
 
+  // Отрисовка таблицы с разбивкой по этапам
   function renderResultsTable(finished) {
     const box = $('tables');
     let filtered = finished;
@@ -1394,22 +1412,53 @@
       filtered = finished.filter(r => r.team === currentFilter);
     }
 
-    if (!filtered.length) { box.innerHTML = '<p class="muted">Пока нет финишировавших.</p>'; return; }
+    if (!filtered.length) { box.innerHTML = '<p class="muted" style="padding:10px;">Пока нет финишировавших.</p>'; return; }
 
     filtered.sort((a,b) => a.totalMs - b.totalMs);
-    let html = `<table><thead><tr><th>#</th><th>Участник</th><th>Штраф</th><th>Время</th></tr></thead><tbody>`;
+    
+    let html = `<table><thead><tr>
+      <th>#</th>
+      <th>Участник</th>
+      <th>Итог. время</th>`;
+      
+    STAGES.forEach(st => {
+      html += `<th>${st.short}</th>`;
+    });
+    
+    html += `</tr></thead><tbody>`;
+    
     filtered.forEach((r, i) => {
       const m = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
-      let penSum = 0;
-      if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
-
+      
       html += `<tr>
         <td>${m}</td>
         <td class="nm">${r.fio}<br><small style="color:var(--dim);font-family:var(--sans)">${r.team}</small></td>
-        <td style="color:var(--red)">+${penSum}с</td>
-        <td><b>${fmtShort(r.totalMs)}</b></td>
-      </tr>`;
+        <td><b>${fmtShort(r.totalMs)}</b></td>`;
+        
+      STAGES.forEach((st, idx) => {
+        const lapMs = r.laps ? r.laps[idx] : null;
+        let cellText = lapMs ? fmtLap(lapMs) : '-';
+        
+        // Собираем штрафы для этого этапа
+        let pensForStage = [];
+        if (r.penalties) {
+          Object.values(r.penalties).forEach(p => {
+            if (p.stageIdx === idx) {
+              pensForStage.push(`+${p.sec}с (${p.reason} - ${p.judgeName})`);
+            }
+          });
+        }
+        
+        if (pensForStage.length > 0) {
+          cellText += `<br><span style="color:var(--red);font-size:10px;font-family:var(--sans);display:block;margin-top:4px;line-height:1.2">${pensForStage.join('<br>')}</span>`;
+        }
+        
+        html += `<td>${cellText}</td>`;
+      });
+      
+      html += `</tr>`;
     });
+    
     html += `</tbody></table>`;
     box.innerHTML = html;
   }
@@ -1417,7 +1466,7 @@
   window.showResults = function() {
     show('scr-results');
     const box = $('tables');
-    box.innerHTML = '<p class="muted">Загрузка...</p>';
+    box.innerHTML = '<p class="muted" style="padding:10px;">Загрузка...</p>';
     
     onValue(ref(db, 'races'), (snap) => {
       window.lastRacesSnap = snap;
@@ -1440,21 +1489,34 @@
     finished.sort((a,b) => a.totalMs - b.totalMs);
     
     let csvContent = "\uFEFF"; // BOM для Excel
-    let header = "Место;ФИО;Команда;Итоговое время;Штрафы (сек)";
+    let header = "Место;ФИО;Команда;Итоговое время";
     STAGES.forEach(st => { header += `;${st.short}`; });
     header += "\n";
     csvContent += header;
 
     finished.forEach((r, i) => {
-      let penSum = 0;
-      if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
       const timeStr = fmtShort(r.totalMs);
       
-      let row = `${i+1};${r.fio};${r.team};${timeStr};+${penSum}с`;
+      let row = `${i+1};${r.fio};${r.team};${timeStr}`;
       
       STAGES.forEach((st, idx) => {
         const lapMs = r.laps ? r.laps[idx] : null;
-        row += `;${lapMs ? fmtLap(lapMs) : '-'}`;
+        let cellText = lapMs ? fmtLap(lapMs) : '-';
+        
+        let pensForStage = [];
+        if (r.penalties) {
+          Object.values(r.penalties).forEach(p => {
+            if (p.stageIdx === idx) {
+              pensForStage.push(`+${p.sec}с (${p.reason} - ${p.judgeName})`);
+            }
+          });
+        }
+        
+        if (pensForStage.length > 0) {
+          cellText += ` [${pensForStage.join(', ')}]`;
+        }
+        
+        row += `;${cellText}`;
       });
       row += "\n";
       csvContent += row;
@@ -1494,7 +1556,6 @@
      10. СТАРТ ПРИЛОЖЕНИЯ И PWA
      ============================================================ */
   
-  // Инициализация манифеста PWA с вашей иконкой
   const manifest = {
     name: "SCORPION Tactical Biathlon",
     short_name: "Scorpion TB",
@@ -1510,7 +1571,6 @@
   const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
   document.getElementById('manifest-link').href = URL.createObjectURL(blob);
 
-  // Остановка заставки через 4.5 секунды
   setTimeout(() => {
     $('scr-splash').classList.add('hide');
     show('scr-role');
