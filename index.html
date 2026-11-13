@@ -277,7 +277,8 @@
      ============================================================ */
   .vk-chat-footer {
     margin-top: auto;
-    padding-top: 30px;
+    padding-top: 20px;
+    padding-bottom: 20px; /* Отступ снизу, чтобы не прилипало к краю */
     cursor: pointer;
     text-align: center;
     position: relative;
@@ -288,15 +289,16 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    background: rgba(0,0,0,0.6);
-    padding: 10px 20px;
-    border-radius: 12px;
+    background: rgba(0,0,0,0.7);
+    padding: 12px 24px;
+    border-radius: 14px;
     border: 1px solid var(--line2);
     transition: 0.2s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   }
   .vk-chat-footer:active .vk-chat-content {
     transform: scale(0.98);
-    background: rgba(0,0,0,0.8);
+    background: rgba(0,0,0,0.9);
   }
 
   .vk-chat-title {
@@ -304,13 +306,13 @@
     align-items: center;
     gap: 8px;
     font-weight: 900;
-    font-size: 13px;
+    font-size: 14px;
     letter-spacing: 1px;
     color: var(--txt);
   }
   .vk-chat-title svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     fill: #0077FF;
     filter: drop-shadow(0 0 5px rgba(0, 119, 255, 0.5));
   }
@@ -440,7 +442,7 @@
       <button class="btn green" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
     </div>
 
-    <!-- ФУТЕР С ЧАТОМ VK -->
+    <!-- ФУТЕР С ЧАТОМ VK (ПОДНЯТ ВЫШЕ) -->
     <div class="vk-chat-footer" onclick="window.open('https://vk.me/join/OkKHi03Lsxk2Npk9kd60tVlrprDeznGXo00=', '_blank')">
       <div class="vk-chat-content">
         <div class="vk-chat-title">
