@@ -74,20 +74,31 @@
   .stage-desc{color:var(--dim);font-size:13px;margin-bottom:14px}
   .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px;}
   
-  /* ============ JUDGE LIST ============ */
-  .judge-item{display:flex;align-items:center;justify-content:space-between;background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;transition:.2s}
+  /* ============ JUDGE LIST (в панели Гл. Судьи) ============ */
+  .judge-item{background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;transition:.2s}
   .judge-item.ready{border-color:var(--red);box-shadow:0 0 14px -4px var(--red-glow)}
   .judge-item.done{border-color:var(--green);opacity:.6}
-  .judge-item .info{flex:1}
-  .judge-item .name{font-weight:800;font-size:14px}
-  .judge-item .meta{font-size:11px;color:var(--dim);margin-top:2px}
-  .judge-item .time{font-family:var(--mono);font-size:18px;font-weight:900;color:var(--red);margin-right:12px;}
   
-  .judge-btn{padding:10px 16px;border-radius:10px;font-weight:900;font-size:12px;border:none;cursor:pointer;transition:.15s;background:var(--red-d);color:#fff;}
-  .judge-btn:active{transform:scale(.95)}
-  .judge-btn.green{background:var(--green);color:#000}
-  .judge-btn.yellow{background:var(--gold);color:#000}
-  .judge-btn:disabled{background:#1a0d0d;color:var(--dim);cursor:not-allowed;}
+  .judge-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .judge-top .info{flex:1}
+  .judge-top .name{font-weight:800;font-size:16px}
+  .judge-top .meta{font-size:11px;color:var(--dim);margin-top:2px}
+  .judge-top .time{font-family:var(--mono);font-size:20px;font-weight:900;color:var(--red);}
+  
+  .pips-mini{display:flex;gap:3px;margin-bottom:10px}
+  .pip-mini{flex:1;height:4px;border-radius:2px;background:#2a0e0e;transition:.3s}
+  .pip-mini.done{background:var(--green)}
+  .pip-mini.now{background:var(--red)}
+
+  .judge-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .btn-mini{padding:8px 12px;border-radius:8px;font-weight:900;font-size:11px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px;}
+  .btn-mini:active{transform:scale(.95)}
+  .btn-mini.act{background:var(--blue);color:#fff}
+  .btn-mini.act-green{background:var(--green);color:#000}
+  .btn-mini.act-yellow{background:var(--gold);color:#000}
+  .btn-mini.act-red{background:var(--red-d);color:#fff}
+  .btn-mini.ghost{background:#1a0d0d;border:1px solid var(--line2);color:var(--txt)}
+  .btn-mini:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);}
 
   /* ============ RESULTS ============ */
   table{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
@@ -214,14 +225,8 @@
     </div>
 
     <div class="card" style="margin-top:12px">
-      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Управление</h3>
-      
-      <label>Ручное судейство этапа (если нужно)</label>
-      <select id="mj-stage-select" onchange="setMJStage()">
-        <option value="">-- Все этапы (только таймер и финиш) --</option>
-      </select>
-
-      <div id="main-judge-list" style="margin-top:12px"><p class="muted">Нет активных забегов.</p></div>
+      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Управление забегом</h3>
+      <div id="main-judge-list"><p class="muted">Нет активных забегов.</p></div>
     </div>
     
     <div class="row" style="margin-top:12px">
@@ -342,16 +347,16 @@
      2. КОНСТАНТЫ
      ============================================================ */
   const STAGES = [
-    { id:'run1',   title:'Бег 50 м',              desc:'Стартовый спринт 50 метров.' },
-    { id:'crawl1', title:'Пролезание под препятствием', desc:'Низкое препятствие.' },
-    { id:'climb',  title:'Перелезть через препятствие', desc:'Высокое препятствие.' },
-    { id:'shoot1', title:'Стрельба: лёжа / сидя / стоя', desc:'Три позиции.' },
-    { id:'crawl2', title:'Пролезание 10 м',        desc:'Длинный низкий участок.' },
-    { id:'evac',   title:'Эвакуация раненого',     desc:'Ранение в живот.' },
-    { id:'run2',   title:'Бег 50 м',               desc:'Ускорение.' },
-    { id:'tourniquet', title:'Наложение жгута',    desc:'Себе на руку.' },
-    { id:'shoot2', title:'Стрельба из пистолета',  desc:'По мишеням.' },
-    { id:'finish', title:'Финишный бег',           desc:'Последний рывок!' }
+    { id:'run1',   title:'Бег 50 м' },
+    { id:'crawl1', title:'Пролезание' },
+    { id:'climb',  title:'Перелезть' },
+    { id:'shoot1', title:'Стрельба 3 поз.' },
+    { id:'crawl2', title:'Пролезание 10м' },
+    { id:'evac',   title:'Эвакуация' },
+    { id:'run2',   title:'Бег 50 м' },
+    { id:'tourniquet', title:'Жгут' },
+    { id:'shoot2', title:'Пистолет' },
+    { id:'finish', title:'Финиш' }
   ];
 
   let state = null;
@@ -362,7 +367,6 @@
   let localPausedTotal = 0;
   let localPauseStartedAt = null;
 
-  let mjStage = null;
   let mainJudgeRAF = null; 
 
   /* ============================================================
@@ -403,23 +407,8 @@
 
   window.openMainJudge = function() {
     show('scr-main-judge');
-    initMJSelect();
     listenMainJudgeRaces();
     startMJTimer();
-  }
-
-  function initMJSelect() {
-    const sel = $('mj-stage-select');
-    sel.innerHTML = '<option value="">-- Все этапы (только таймер и финиш) --</option>';
-    STAGES.forEach((st, i) => {
-      sel.innerHTML += `<option value="${i}">Этап ${i+1}: ${st.title}</option>`;
-    });
-  }
-
-  window.setMJStage = function() {
-    const val = $('mj-stage-select').value;
-    mjStage = val === '' ? null : parseInt(val);
-    renderMainJudgeList();
   }
 
   window.registerAndStart = async function() {
@@ -427,7 +416,6 @@
     const team = $('m-team').value.trim();
     if(!fio || !team) { toast('Заполните ФИО и команду', 'err'); return; }
 
-    // ПРОВЕРКА: не бежит ли кто-то сейчас?
     const snap = await new Promise(res => onValue(ref(db, 'races'), res, { onlyOnce: true }));
     const data = snap.val() || {};
     const activeRunners = Object.values(data).filter(r => r.status === 'running');
@@ -445,6 +433,7 @@
         pausedTotal: 0,
         pauseStartedAt: null,
         stageIdx: 0,
+        penalties: 0,
         status: 'running'
       });
       $('m-fio').value = '';
@@ -466,7 +455,6 @@
     const tick = () => {
       if (!$('scr-main-judge').classList.contains('on')) return;
       
-      // Пробегаемся по всем элементам времени и обновляем их
       document.querySelectorAll('.judge-item .time').forEach(el => {
         if (el.dataset.start && el.dataset.paused !== 'true') {
           const start = parseInt(el.dataset.start);
@@ -489,41 +477,69 @@
     box.innerHTML = '';
     active.forEach(r => {
       const isPaused = !!r.pauseStartedAt;
-      let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
+      const isFinishedStages = r.stageIdx >= STAGES.length;
       
-      let stageActionHtml = '';
-      if (mjStage !== null) {
-        const isDone = r.stageIdx > mjStage;
-        const isOnMyStage = r.stageIdx === mjStage;
-        
-        if (isDone) stageActionHtml = `<button class="judge-btn green" disabled>✓ ЭТАП ПРОЙДЕН</button>`;
-        else if (isOnMyStage) stageActionHtml = `<button class="judge-btn yellow" onclick="judgeComplete('${r.id}', ${mjStage})">ЗАСЧИТАТЬ ЭТАП</button>`;
-        else stageActionHtml = `<button class="judge-btn" disabled>ЖДЁМ ЭТАП ${mjStage+1}</button>`;
+      let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
+
+      // Строим мини-прогресс бар (10 точек)
+      let pipsHtml = '<div class="pips-mini">';
+      STAGES.forEach((s, i) => {
+        let cls = '';
+        if (i < r.stageIdx) cls = 'done';
+        else if (i === r.stageIdx) cls = 'now';
+        pipsHtml += `<div class="pip-mini ${cls}"></div>`;
+      });
+      pipsHtml += '</div>';
+
+      // Кнопки управления
+      let actBtn = '';
+      if (r.stageIdx < STAGES.length) {
+        actBtn = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${r.stageIdx})">ЗАСЧИТАТЬ ЭТАП ${r.stageIdx+1}</button>`;
+      } else {
+        actBtn = `<button class="btn-mini act-green" disabled>ВСЕ ЭТАПЫ ПРОЙДЕНЫ</button>`;
       }
 
       const div = document.createElement('div');
-      div.className = `judge-item ${mjStage !== null && r.stageIdx === mjStage ? 'ready' : ''}`;
+      div.className = `judge-item ${!isFinishedStages ? 'ready' : ''}`;
       div.innerHTML = `
-        <div class="info">
-          <div class="name">${r.fio}</div>
-          <div class="meta">${r.team} · Этап ${r.stageIdx + 1}</div>
+        <div class="judge-top">
+          <div class="info">
+            <div class="name">${r.fio}</div>
+            <div class="meta">${r.team}</div>
+          </div>
+          <div class="time" 
+               data-start="${r.startAt}" 
+               data-paused="${isPaused}" 
+               data-paused-total="${r.pausedTotal || 0}">
+               ${fmtShort(timeMs)}
+          </div>
         </div>
-        <!-- Таймер с data-атрибутами для анимации -->
-        <div class="time" 
-             data-start="${r.startAt}" 
-             data-paused="${isPaused}" 
-             data-paused-total="${r.pausedTotal || 0}"
-             data-pause-start="${r.pauseStartedAt || ''}">
-             ${fmtShort(timeMs)}
+        ${pipsHtml}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:11px;color:var(--dim)">Текущий этап: <b>${r.stageIdx + 1}</b></div>
+            <div style="font-size:11px;color:var(--red);font-weight:bold;">Штраф: +${r.penalties || 0}с</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
-          ${stageActionHtml}
-          <button class="judge-btn ${isPaused?'yellow':'green'}" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
-          <button class="judge-btn" onclick="finishParticipant('${r.id}')">🏁 ФИНИШ</button>
+        <div class="judge-actions">
+          ${actBtn}
+        </div>
+        <div class="judge-actions" style="margin-top:6px;">
+          <button class="btn-mini act-red" onclick="addPenalty('${r.id}', 10)">+10с Штраф</button>
+          <button class="btn-mini act-yellow" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
+          <button class="btn-mini ghost" onclick="finishParticipant('${r.id}')">🏁 ФИНИШ</button>
         </div>
       `;
       box.appendChild(div);
     });
+  }
+
+  window.addPenalty = async function(id, seconds) {
+    try {
+      const snap = await new Promise(res => onValue(ref(db, 'races/' + id), res, { onlyOnce: true }));
+      const data = snap.val();
+      const current = data.penalties || 0;
+      await update(ref(db, 'races/' + id), { penalties: current + seconds });
+      toast(`Добавлен штраф +${seconds}с`, 'ok');
+    } catch(e) { toast('Ошибка', 'err'); }
   }
 
   window.togglePause = async function(id, isPaused) {
@@ -552,8 +568,9 @@
       const snap = await new Promise(res => onValue(ref(db, 'races/' + id), res, { onlyOnce: true }));
       const data = snap.val();
       const cleanMs = calcMs(data.startAt, data.pausedTotal, data.pauseStartedAt);
+      const totalMs = cleanMs + ((data.penalties || 0) * 1000);
       
-      await set(ref(db, 'races/' + id), { ...data, status: 'finished', finishAt: Date.now(), cleanMs, pauseStartedAt: null });
+      await set(ref(db, 'races/' + id), { ...data, status: 'finished', finishAt: Date.now(), cleanMs, totalMs, pauseStartedAt: null });
       toast('Участник финишировал!', 'ok');
     } catch(e) { toast('Ошибка', 'err'); }
   }
@@ -579,7 +596,7 @@
             <div class="name">${r.fio}</div>
             <div class="meta">${r.team}</div>
           </div>
-          <button class="judge-btn" onclick="startParticipantRace('${r.id}')">НА СТАРТ</button>
+          <button class="btn-mini act" onclick="startParticipantRace('${r.id}')">НА СТАРТ</button>
         `;
         box.appendChild(div);
       });
@@ -665,7 +682,7 @@
     const st = STAGES[state.stageIdx];
     $('badge').textContent = `ЭТАП ${state.stageIdx + 1}`;
     $('st-title').textContent = st.title;
-    $('st-desc').textContent = st.desc;
+    $('st-desc').textContent = 'Ожидайте отметки судьи.';
     $('wait-judge').style.display = 'block';
     buildPips();
   }
@@ -729,18 +746,20 @@
       div.className = `judge-item ${isOnMyStage ? 'ready' : ''} ${isDone ? 'done' : ''}`;
       
       let btnHtml = '';
-      if (isDone) btnHtml = `<button class="judge-btn green" disabled>✓ ПРОЙДЕН</button>`;
-      else if (isOnMyStage) btnHtml = `<button class="judge-btn" onclick="judgeComplete('${r.id}', ${judgeStage})">ЗАСЧИТАТЬ</button>`;
-      else btnHtml = `<button class="judge-btn" disabled>ЖДЁМ</button>`;
+      if (isDone) btnHtml = `<button class="btn-mini act-green" disabled>✓ ПРОЙДЕН</button>`;
+      else if (isOnMyStage) btnHtml = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${judgeStage})">ЗАСЧИТАТЬ</button>`;
+      else btnHtml = `<button class="btn-mini ghost" disabled>ЖДЁМ</button>`;
 
       div.innerHTML = `
-        <div class="info">
-          <div class="name">${r.fio}</div>
-          <div class="meta">${r.team} · Этап ${r.stageIdx + 1}</div>
+        <div class="judge-top">
+          <div class="info">
+            <div class="name">${r.fio}</div>
+            <div class="meta">${r.team} · Этап ${r.stageIdx + 1}</div>
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px">
+        <div class="judge-actions">
           ${btnHtml}
-          <button class="judge-btn ${isPaused?'yellow':''}" onclick="togglePause('${r.id}', ${isPaused})" style="font-size:10px;padding:6px;background:${isPaused?'#ffcf3f':'#2a0d0d'};color:${isPaused?'#000':'#fff'}">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
+          <button class="btn-mini ${isPaused?'act-yellow':'ghost'}" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶':'⏸'}</button>
         </div>
       `;
       box.appendChild(div);
@@ -748,10 +767,10 @@
   }
 
   window.judgeComplete = async function(participantId, stageIdx) {
-    if(!confirm('Засчитать этап?')) return;
+    if(!confirm(`Засчитать этап ${stageIdx + 1}?`)) return;
     try {
       await set(ref(db, 'races/' + participantId + '/stageIdx'), stageIdx + 1);
-      toast('✅ Этап засчитан!', 'ok');
+      toast(`✅ Этап ${stageIdx + 1} засчитан!`, 'ok');
       if(navigator.vibrate) navigator.vibrate(100);
     } catch(e) { toast('Ошибка!', 'err'); }
   }
@@ -769,11 +788,16 @@
       
       if (!finished.length) { box.innerHTML = '<p class="muted">Пока нет финишировавших.</p>'; return; }
 
-      finished.sort((a,b) => a.cleanMs - b.cleanMs);
-      let html = `<table><thead><tr><th>#</th><th>Участник</th><th>Команда</th><th>Время</th></tr></thead><tbody>`;
+      finished.sort((a,b) => a.totalMs - b.totalMs);
+      let html = `<table><thead><tr><th>#</th><th>Участник</th><th>Штраф</th><th>Время</th></tr></thead><tbody>`;
       finished.forEach((r, i) => {
         const m = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
-        html += `<tr><td>${m}</td><td class="nm">${r.fio}</td><td style="color:var(--dim)">${r.team}</td><td>${fmtShort(r.cleanMs)}</td></tr>`;
+        html += `<tr>
+          <td>${m}</td>
+          <td class="nm">${r.fio}<br><small style="color:var(--dim);font-family:var(--sans)">${r.team}</small></td>
+          <td style="color:var(--red)">+${r.penalties||0}с</td>
+          <td><b>${fmtShort(r.totalMs)}</b></td>
+        </tr>`;
       });
       html += `</tbody></table>`;
       box.innerHTML = html;
