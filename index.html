@@ -74,18 +74,19 @@
   .stage-desc{color:var(--dim);font-size:13px;margin-bottom:14px}
   .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px; display:flex; align-items:center; gap:6px;}
   
-  /* ============ JUDGE LIST (в панели Гл. Судьи) ============ */
+  /* ============ JUDGE LIST ============ */
   .judge-item{background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;transition:.2s}
   .judge-item.ready{border-color:var(--red);box-shadow:0 0 14px -4px var(--red-glow)}
   .judge-item.done{border-color:var(--green);opacity:.6}
   
-  .judge-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .judge-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
   .judge-top .info{flex:1}
   .judge-top .name{font-weight:800;font-size:16px}
   .judge-top .meta{font-size:11px;color:var(--dim);margin-top:2px}
-  .judge-top .time{font-family:var(--mono);font-size:20px;font-weight:900;color:var(--red);}
+  .judge-top .time{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--red); text-align:right; line-height: 1.2;}
+  .judge-top .pen {font-size:11px; color:var(--red); font-weight:bold;}
   
-  /* Визуализация этапов (список с иконками) */
+  /* Визуализация этапов */
   .stages-map{display:flex; flex-direction:column; gap:6px; margin: 10px 0;}
   .stage-row{display:flex; align-items:center; gap:8px; padding: 6px 10px; background: #120707; border-radius: 8px; border: 1px solid transparent; opacity: 0.5; transition: 0.3s;}
   .stage-row.done { opacity: 1; border-color: var(--green); background: #0c1a0f; }
@@ -95,7 +96,7 @@
   .stage-row .st { font-size: 14px; font-weight: 900;}
 
   .judge-actions{display:flex;gap:6px;flex-wrap:wrap}
-  .btn-mini{padding:8px 12px;border-radius:8px;font-weight:900;font-size:11px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px;}
+  .btn-mini{padding:10px 12px;border-radius:8px;font-weight:900;font-size:12px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px; min-height: 38px;}
   .btn-mini:active{transform:scale(.95)}
   .btn-mini.act{background:var(--blue);color:#fff}
   .btn-mini.act-green{background:var(--green);color:#000}
@@ -214,7 +215,7 @@
     <header>
       <button class="back-btn" onclick="show('scr-role')">←</button>
       <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small>ПОЛНЫЙ ДОСТУП</small></div></div>
-      <div style="width:40px"></div>
+      <button class="back-btn" onclick="logoutMainJudge()" title="Выйти из режима Гл. Судьи" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
 
     <div class="card">
@@ -265,7 +266,6 @@
       <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
       <div class="timer label" id="timer-status">ОБЩЕЕ ВРЕМЯ</div>
       
-      <!-- Карта этапов для участника -->
       <div class="stages-map" id="participant-stages-map"></div>
 
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:12px">
@@ -351,7 +351,7 @@
   const db = getDatabase(app);
 
   /* ============================================================
-     2. КОНСТАНТЫ И ЭТАПЫ (С ИКОНКАМИ И НАЗВАНИЯМИ)
+     2. КОНСТАНТЫ И ЭТАПЫ
      ============================================================ */
   const STAGES = [
     { id:'run1',   title:'Бег 50 м',              ico:'🏃', short:'Бег 50м' },
@@ -375,6 +375,7 @@
   let localPauseStartedAt = null;
 
   let mainJudgeRAF = null; 
+  let judgePageRAF = null; 
 
   /* ============================================================
      3. УТИЛИТЫ
@@ -400,8 +401,8 @@
     return Math.max(0, ms);
   }
 
-  // Функция для рендера карты этапов
   function renderStagesMap(container, currentStageIdx) {
+    if (!container) return;
     let html = '';
     STAGES.forEach((st, i) => {
       let cls = '';
@@ -422,15 +423,31 @@
   }
 
   /* ============================================================
-     4. ГЛАВНЫЙ СУДЬЯ
+     4. ГЛАВНЫЙ СУДЬЯ (С ПАРОЛЕМ И СЕССИЕЙ)
      ============================================================ */
+  
+  // Проверка пароля и сохранение в sessionStorage
   window.promptMainJudge = function() {
+    // Если сессия уже открыта — пускаем сразу
+    if (sessionStorage.getItem('mj_auth') === 'true') {
+      openMainJudge();
+      return;
+    }
+    
     const pwd = prompt('Введите пароль Главного судьи:');
     if (pwd === 'scorp2015') {
+      sessionStorage.setItem('mj_auth', 'true');
       openMainJudge();
     } else if (pwd !== null) {
       toast('Неверный пароль!', 'err');
     }
+  }
+
+  // Выход из режима главного судьи
+  window.logoutMainJudge = function() {
+    sessionStorage.removeItem('mj_auth');
+    toast('Вы вышли из режима Главного судьи');
+    show('scr-role');
   }
 
   window.openMainJudge = function() {
@@ -509,7 +526,6 @@
       
       let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
 
-      // Кнопки управления
       let actBtn = '';
       if (r.stageIdx < STAGES.length) {
         const st = STAGES[r.stageIdx];
@@ -526,22 +542,20 @@
             <div class="name">${r.fio}</div>
             <div class="meta">${r.team}</div>
           </div>
-          <div class="time" 
-               data-start="${r.startAt}" 
-               data-paused="${isPaused}" 
-               data-paused-total="${r.pausedTotal || 0}">
-               ${fmtShort(timeMs)}
+          <div style="text-align:right">
+            <div class="time" 
+                 data-start="${r.startAt}" 
+                 data-paused="${isPaused}" 
+                 data-paused-total="${r.pausedTotal || 0}">
+                 ${fmtShort(timeMs)}
+            </div>
+            <div class="pen">Штраф: +${r.penalties || 0}с</div>
           </div>
         </div>
         
-        <!-- Здесь карта этапов -->
         <div class="stages-map" id="mj-map-${r.id}"></div>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; margin-top:8px;">
-            <div style="font-size:11px;color:var(--dim)">Текущий этап: <b>${r.stageIdx + 1}</b></div>
-            <div style="font-size:11px;color:var(--red);font-weight:bold;">Штраф: +${r.penalties || 0}с</div>
-        </div>
-        <div class="judge-actions">
+        <div class="judge-actions" style="margin-top:10px;">
           ${actBtn}
         </div>
         <div class="judge-actions" style="margin-top:6px;">
@@ -552,7 +566,6 @@
       `;
       box.appendChild(div);
       
-      // Отрисовываем карту этапов для этого участника
       renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx);
     });
   }
@@ -641,7 +654,7 @@
         state = { id, fio: data.fio, team: data.team, stageIdx: data.stageIdx };
         $('race-name').textContent = data.fio;
         $('race-meta').textContent = data.team;
-        buildParticipantStageMap(); // <-- Обновляем карту этапов
+        buildParticipantStageMap(); 
         renderStage();
         startLocalTimer();
       }
@@ -660,7 +673,7 @@
         if (state.stageIdx >= STAGES.length) {
           toast('Вы на финише!', 'ok');
         } else {
-          buildParticipantStageMap(); // <-- Обновляем при переходе на новый этап
+          buildParticipantStageMap(); 
           renderStage();
           toast('✅ Этап засчитан!', 'ok');
           if(navigator.vibrate) navigator.vibrate([50, 100, 50]);
@@ -724,6 +737,7 @@
     show('scr-judge');
     initJudgeSelect();
     listenAllRaces();
+    startJudgeTimer(); 
   }
 
   function initJudgeSelect() {
@@ -749,6 +763,23 @@
     });
   }
 
+  function startJudgeTimer() {
+    cancelAnimationFrame(judgePageRAF);
+    const tick = () => {
+      if (!$('scr-judge').classList.contains('on')) return;
+      
+      document.querySelectorAll('.judge-item .time').forEach(el => {
+        if (el.dataset.start && el.dataset.paused !== 'true') {
+          const start = parseInt(el.dataset.start);
+          const pausedTotal = parseInt(el.dataset.pausedTotal || 0);
+          el.textContent = fmtShort(calcMs(start, pausedTotal, null));
+        }
+      });
+      judgePageRAF = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
   function renderJudgeList() {
     const box = $('judge-list');
     if (judgeStage === null) { box.innerHTML = '<p class="muted">Сначала выберите ваш этап выше.</p>'; return; }
@@ -762,6 +793,8 @@
       const isOnMyStage = r.stageIdx === judgeStage;
       const isPaused = !!r.pauseStartedAt;
       
+      let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
+
       const div = document.createElement('div');
       div.className = `judge-item ${isOnMyStage ? 'ready' : ''} ${isDone ? 'done' : ''}`;
       
@@ -775,15 +808,32 @@
         <div class="judge-top">
           <div class="info">
             <div class="name">${r.fio}</div>
-            <div class="meta">${r.team} · Сейчас на этапе: ${STAGES[r.stageIdx] ? STAGES[r.stageIdx].short : 'Финиш'}</div>
+            <div class="meta">${r.team} · Сейчас: ${STAGES[r.stageIdx] ? STAGES[r.stageIdx].short : 'Финиш'}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="time" 
+                 data-start="${r.startAt}" 
+                 data-paused="${isPaused}" 
+                 data-paused-total="${r.pausedTotal || 0}">
+                 ${fmtShort(timeMs)}
+            </div>
+            <div class="pen">Штраф: +${r.penalties || 0}с</div>
           </div>
         </div>
-        <div class="judge-actions">
+        
+        <div class="stages-map" id="j-map-${r.id}"></div>
+
+        <div class="judge-actions" style="margin-top:10px;">
           ${btnHtml}
-          <button class="btn-mini ${isPaused?'act-yellow':'ghost'}" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶':'⏸'}</button>
+        </div>
+        <div class="judge-actions" style="margin-top:6px;">
+          <button class="btn-mini act-red" onclick="addPenalty('${r.id}', 10)">+10с Штраф</button>
+          <button class="btn-mini act-yellow" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
         </div>
       `;
       box.appendChild(div);
+
+      renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx);
     });
   }
 
