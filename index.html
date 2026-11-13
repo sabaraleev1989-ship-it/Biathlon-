@@ -186,7 +186,7 @@
     <header><div class="brand"><span class="sc">🦂</span><div>РЕЖИМ РАБОТЫ<small>ВЫБЕРИТЕ РОЛЬ</small></div></div></header>
     <div class="card">
       <h2>Кто вы на трассе?</h2>
-      <p class="muted">Главный судья регистрирует и запускает. Судьи отмечают этапы. Участник видит свой прогресс.</p>
+      <p class="muted">Главный судья регистрирует и запускает по очереди. Судьи отмечают этапы.</p>
       <div style="height:16px"></div>
       <button class="btn blue" onclick="promptMainJudge()" style="margin-bottom:10px">📋 ГЛАВНЫЙ СУДЬЯ (СТАРТ/ФИНИШ)</button>
       <button class="btn ghost" onclick="openJudgeMode()" style="margin-bottom:10px">👮 СУДЬЯ НА ЭТАПЕ</button>
@@ -203,19 +203,19 @@
     </header>
 
     <div class="card">
-      <h2>Регистрация на старт</h2>
+      <h2>Регистрация и запуск</h2>
       <label>ФИО участника</label>
       <input id="m-fio" placeholder="Иванов Иван" />
       <label>Команда</label>
       <input id="m-team" placeholder="Название команды" />
       <div style="height:16px"></div>
       <button class="btn green" onclick="registerAndStart()">🚀 НА СТАРТ</button>
+      <p class="muted" style="margin-top:8px;font-size:10px">Если сейчас кто-то бежит, новый старт заблокируется до его финиша.</p>
     </div>
 
     <div class="card" style="margin-top:12px">
-      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Управление забегами</h3>
+      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Управление</h3>
       
-      <!-- Главный судья теперь может выбрать этап для ручного судейства -->
       <label>Ручное судейство этапа (если нужно)</label>
       <select id="mj-stage-select" onchange="setMJStage()">
         <option value="">-- Все этапы (только таймер и финиш) --</option>
@@ -239,9 +239,9 @@
     </header>
     <div class="card">
       <h2>Кто вы?</h2>
-      <p class="muted">Выберите своё имя из списка зарегистрированных главным судьёй.</p>
+      <p class="muted">Выберите своё имя из списка тех, кого запустил Главный судья.</p>
       <div style="height:10px"></div>
-      <div id="participant-list"><p class="muted">Ожидание регистрации...</p></div>
+      <div id="participant-list"><p class="muted">Ожидание старта...</p></div>
     </div>
   </section>
 
@@ -362,8 +362,8 @@
   let localPausedTotal = 0;
   let localPauseStartedAt = null;
 
-  // Переменные для главного судьи
   let mjStage = null;
+  let mainJudgeRAF = null; 
 
   /* ============================================================
      3. УТИЛИТЫ
@@ -390,10 +390,8 @@
   }
 
   /* ============================================================
-     4. ГЛАВНЫЙ СУДЬЯ (СТАРТ / ФИНИШ + СУДЕЙСТВО)
+     4. ГЛАВНЫЙ СУДЬЯ
      ============================================================ */
-  
-  // Запрос пароля
   window.promptMainJudge = function() {
     const pwd = prompt('Введите пароль Главного судьи:');
     if (pwd === 'scorp2015') {
@@ -407,6 +405,7 @@
     show('scr-main-judge');
     initMJSelect();
     listenMainJudgeRaces();
+    startMJTimer();
   }
 
   function initMJSelect() {
@@ -420,13 +419,23 @@
   window.setMJStage = function() {
     const val = $('mj-stage-select').value;
     mjStage = val === '' ? null : parseInt(val);
-    renderMainJudgeList(); // перерисовываем список с учетом выбранного этапа
+    renderMainJudgeList();
   }
 
   window.registerAndStart = async function() {
     const fio = $('m-fio').value.trim();
     const team = $('m-team').value.trim();
     if(!fio || !team) { toast('Заполните ФИО и команду', 'err'); return; }
+
+    // ПРОВЕРКА: не бежит ли кто-то сейчас?
+    const snap = await new Promise(res => onValue(ref(db, 'races'), res, { onlyOnce: true }));
+    const data = snap.val() || {};
+    const activeRunners = Object.values(data).filter(r => r.status === 'running');
+    
+    if (activeRunners.length > 0) {
+      toast('Сначала дождитесь финиша текущего участника!', 'err');
+      return;
+    }
 
     const id = 'user_' + Date.now();
     try {
@@ -440,16 +449,34 @@
       });
       $('m-fio').value = '';
       $('m-team').value = '';
-      toast('Участник добавлен на дистанцию!', 'ok');
+      toast('Участник на дистанции!', 'ok');
     } catch(e) { toast('Ошибка сети!', 'err'); }
   }
 
   function listenMainJudgeRaces() {
     onValue(ref(db, 'races'), (snap) => {
       const data = snap.val() || {};
-      window.allRacesData = data; // кэшируем для рендера
+      window.allRacesData = data;
       renderMainJudgeList();
     });
+  }
+
+  function startMJTimer() {
+    cancelAnimationFrame(mainJudgeRAF);
+    const tick = () => {
+      if (!$('scr-main-judge').classList.contains('on')) return;
+      
+      // Пробегаемся по всем элементам времени и обновляем их
+      document.querySelectorAll('.judge-item .time').forEach(el => {
+        if (el.dataset.start && el.dataset.paused !== 'true') {
+          const start = parseInt(el.dataset.start);
+          const pausedTotal = parseInt(el.dataset.pausedTotal || 0);
+          el.textContent = fmtShort(calcMs(start, pausedTotal, null));
+        }
+      });
+      mainJudgeRAF = requestAnimationFrame(tick);
+    };
+    tick();
   }
 
   function renderMainJudgeList() {
@@ -462,9 +489,8 @@
     box.innerHTML = '';
     active.forEach(r => {
       const isPaused = !!r.pauseStartedAt;
-      const timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
+      let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
       
-      // Логика для отображения кнопки "Засчитать этап", если Главный судья выбрал конкретный этап
       let stageActionHtml = '';
       if (mjStage !== null) {
         const isDone = r.stageIdx > mjStage;
@@ -482,7 +508,14 @@
           <div class="name">${r.fio}</div>
           <div class="meta">${r.team} · Этап ${r.stageIdx + 1}</div>
         </div>
-        <div class="time">${fmtShort(timeMs)}</div>
+        <!-- Таймер с data-атрибутами для анимации -->
+        <div class="time" 
+             data-start="${r.startAt}" 
+             data-paused="${isPaused}" 
+             data-paused-total="${r.pausedTotal || 0}"
+             data-pause-start="${r.pauseStartedAt || ''}">
+             ${fmtShort(timeMs)}
+        </div>
         <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
           ${stageActionHtml}
           <button class="judge-btn ${isPaused?'yellow':'green'}" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
@@ -535,7 +568,7 @@
       const active = Object.values(data).filter(r => r.status === 'running');
       const box = $('participant-list');
       
-      if (!active.length) { box.innerHTML = '<p class="muted">Главный судья ещё не зарегистрировал участников.</p>'; return; }
+      if (!active.length) { box.innerHTML = '<p class="muted">Ожидание старта от Главного судьи...</p>'; return; }
       
       box.innerHTML = '';
       active.forEach(r => {
