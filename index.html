@@ -72,7 +72,7 @@
 
   .stage-title{font-size:20px;font-weight:900;margin:4px 0 6px}
   .stage-desc{color:var(--dim);font-size:13px;margin-bottom:14px}
-  .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px;}
+  .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px; display:flex; align-items:center; gap:6px;}
   
   /* ============ JUDGE LIST (в панели Гл. Судьи) ============ */
   .judge-item{background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;transition:.2s}
@@ -85,10 +85,14 @@
   .judge-top .meta{font-size:11px;color:var(--dim);margin-top:2px}
   .judge-top .time{font-family:var(--mono);font-size:20px;font-weight:900;color:var(--red);}
   
-  .pips-mini{display:flex;gap:3px;margin-bottom:10px}
-  .pip-mini{flex:1;height:4px;border-radius:2px;background:#2a0e0e;transition:.3s}
-  .pip-mini.done{background:var(--green)}
-  .pip-mini.now{background:var(--red)}
+  /* Визуализация этапов (список с иконками) */
+  .stages-map{display:flex; flex-direction:column; gap:6px; margin: 10px 0;}
+  .stage-row{display:flex; align-items:center; gap:8px; padding: 6px 10px; background: #120707; border-radius: 8px; border: 1px solid transparent; opacity: 0.5; transition: 0.3s;}
+  .stage-row.done { opacity: 1; border-color: var(--green); background: #0c1a0f; }
+  .stage-row.now { opacity: 1; border-color: var(--red); background: #1a0707; box-shadow: 0 0 10px -2px var(--red-glow); }
+  .stage-row .ico { font-size: 16px; width: 20px; text-align: center;}
+  .stage-row .nm { font-size: 12px; font-weight: 700; flex: 1;}
+  .stage-row .st { font-size: 14px; font-weight: 900;}
 
   .judge-actions{display:flex;gap:6px;flex-wrap:wrap}
   .btn-mini{padding:8px 12px;border-radius:8px;font-weight:900;font-size:11px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px;}
@@ -260,7 +264,10 @@
     <div class="card">
       <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
       <div class="timer label" id="timer-status">ОБЩЕЕ ВРЕМЯ</div>
-      <div class="progress" id="pips"></div>
+      
+      <!-- Карта этапов для участника -->
+      <div class="stages-map" id="participant-stages-map"></div>
+
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:12px">
         <span id="step-lbl">ЭТАП 1</span><span style="color:var(--green)">🟢 Онлайн</span>
       </div>
@@ -344,19 +351,19 @@
   const db = getDatabase(app);
 
   /* ============================================================
-     2. КОНСТАНТЫ
+     2. КОНСТАНТЫ И ЭТАПЫ (С ИКОНКАМИ И НАЗВАНИЯМИ)
      ============================================================ */
   const STAGES = [
-    { id:'run1',   title:'Бег 50 м' },
-    { id:'crawl1', title:'Пролезание' },
-    { id:'climb',  title:'Перелезть' },
-    { id:'shoot1', title:'Стрельба 3 поз.' },
-    { id:'crawl2', title:'Пролезание 10м' },
-    { id:'evac',   title:'Эвакуация' },
-    { id:'run2',   title:'Бег 50 м' },
-    { id:'tourniquet', title:'Жгут' },
-    { id:'shoot2', title:'Пистолет' },
-    { id:'finish', title:'Финиш' }
+    { id:'run1',   title:'Бег 50 м',              ico:'🏃', short:'Бег 50м' },
+    { id:'crawl1', title:'Пролезание под препятствием', ico:'🪖', short:'Пролезание' },
+    { id:'climb',  title:'Перелезть через препятствие', ico:'🧗', short:'Перелезть' },
+    { id:'shoot1', title:'Стрельба: лёжа / сидя / стоя', ico:'🎯', short:'Стрельба 3 поз.' },
+    { id:'crawl2', title:'Пролезание 10 м',        ico:'🪖', short:'Пролезание 10м' },
+    { id:'evac',   title:'Эвакуация раненого',     ico:'🚑', short:'Эвакуация' },
+    { id:'run2',   title:'Бег 50 м',               ico:'🏃', short:'Бег 50м' },
+    { id:'tourniquet', title:'Наложение жгута',    ico:'🩸', short:'Жгут' },
+    { id:'shoot2', title:'Стрельба из пистолета',  ico:'🔫', short:'Пистолет' },
+    { id:'finish', title:'Финишный бег',           ico:'🏁', short:'Финиш' }
   ];
 
   let state = null;
@@ -391,6 +398,27 @@
     let ms = Date.now() - start - (pausedTotal || 0);
     if (pauseStartedAt) ms -= (Date.now() - pauseStartedAt);
     return Math.max(0, ms);
+  }
+
+  // Функция для рендера карты этапов
+  function renderStagesMap(container, currentStageIdx) {
+    let html = '';
+    STAGES.forEach((st, i) => {
+      let cls = '';
+      let stIco = '';
+      if (i < currentStageIdx) { cls = 'done'; stIco = '✅'; }
+      else if (i === currentStageIdx) { cls = 'now'; stIco = '⏳'; }
+      else { cls = ''; stIco = '⚪'; }
+      
+      html += `
+        <div class="stage-row ${cls}">
+          <div class="ico">${st.ico}</div>
+          <div class="nm">${st.short}</div>
+          <div class="st">${stIco}</div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
   }
 
   /* ============================================================
@@ -481,20 +509,11 @@
       
       let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
 
-      // Строим мини-прогресс бар (10 точек)
-      let pipsHtml = '<div class="pips-mini">';
-      STAGES.forEach((s, i) => {
-        let cls = '';
-        if (i < r.stageIdx) cls = 'done';
-        else if (i === r.stageIdx) cls = 'now';
-        pipsHtml += `<div class="pip-mini ${cls}"></div>`;
-      });
-      pipsHtml += '</div>';
-
       // Кнопки управления
       let actBtn = '';
       if (r.stageIdx < STAGES.length) {
-        actBtn = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${r.stageIdx})">ЗАСЧИТАТЬ ЭТАП ${r.stageIdx+1}</button>`;
+        const st = STAGES[r.stageIdx];
+        actBtn = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${r.stageIdx})">Засчитать: ${st.ico} ${st.short}</button>`;
       } else {
         actBtn = `<button class="btn-mini act-green" disabled>ВСЕ ЭТАПЫ ПРОЙДЕНЫ</button>`;
       }
@@ -514,8 +533,11 @@
                ${fmtShort(timeMs)}
           </div>
         </div>
-        ${pipsHtml}
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        
+        <!-- Здесь карта этапов -->
+        <div class="stages-map" id="mj-map-${r.id}"></div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; margin-top:8px;">
             <div style="font-size:11px;color:var(--dim)">Текущий этап: <b>${r.stageIdx + 1}</b></div>
             <div style="font-size:11px;color:var(--red);font-weight:bold;">Штраф: +${r.penalties || 0}с</div>
         </div>
@@ -529,6 +551,9 @@
         </div>
       `;
       box.appendChild(div);
+      
+      // Отрисовываем карту этапов для этого участника
+      renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx);
     });
   }
 
@@ -616,7 +641,7 @@
         state = { id, fio: data.fio, team: data.team, stageIdx: data.stageIdx };
         $('race-name').textContent = data.fio;
         $('race-meta').textContent = data.team;
-        buildPips();
+        buildParticipantStageMap(); // <-- Обновляем карту этапов
         renderStage();
         startLocalTimer();
       }
@@ -635,12 +660,17 @@
         if (state.stageIdx >= STAGES.length) {
           toast('Вы на финише!', 'ok');
         } else {
+          buildParticipantStageMap(); // <-- Обновляем при переходе на новый этап
           renderStage();
           toast('✅ Этап засчитан!', 'ok');
           if(navigator.vibrate) navigator.vibrate([50, 100, 50]);
         }
       }
     });
+  }
+
+  function buildParticipantStageMap() {
+    renderStagesMap($('participant-stages-map'), state.stageIdx);
   }
 
   function startLocalTimer() {
@@ -667,24 +697,14 @@
     tick();
   }
 
-  function buildPips() {
-    const w = $('pips'); w.innerHTML = '';
-    STAGES.forEach((s, i) => {
-      const d = document.createElement('div');
-      d.className = 'pip' + (i < state.stageIdx ? ' done' : i === state.stageIdx ? ' now' : '');
-      w.appendChild(d);
-    });
-    $('step-lbl').textContent = `ЭТАП ${Math.min(state.stageIdx + 1, STAGES.length)} / ${STAGES.length}`;
-  }
-
   function renderStage() {
     if(state.stageIdx >= STAGES.length) return;
     const st = STAGES[state.stageIdx];
-    $('badge').textContent = `ЭТАП ${state.stageIdx + 1}`;
+    $('badge').innerHTML = `${st.ico} ЭТАП ${state.stageIdx + 1}`;
     $('st-title').textContent = st.title;
     $('st-desc').textContent = 'Ожидайте отметки судьи.';
     $('wait-judge').style.display = 'block';
-    buildPips();
+    $('step-lbl').textContent = `ЭТАП ${Math.min(state.stageIdx + 1, STAGES.length)} / ${STAGES.length}`;
   }
 
   function finishRunLocal(cleanMs) {
@@ -710,7 +730,7 @@
     const sel = $('judge-stage-select');
     sel.innerHTML = '<option value="">-- Выберите этап --</option>';
     STAGES.forEach((st, i) => {
-      sel.innerHTML += `<option value="${i}">Этап ${i+1}: ${st.title}</option>`;
+      sel.innerHTML += `<option value="${i}">${st.ico} ${st.title}</option>`;
     });
   }
 
@@ -746,15 +766,16 @@
       div.className = `judge-item ${isOnMyStage ? 'ready' : ''} ${isDone ? 'done' : ''}`;
       
       let btnHtml = '';
+      const curSt = STAGES[judgeStage];
       if (isDone) btnHtml = `<button class="btn-mini act-green" disabled>✓ ПРОЙДЕН</button>`;
-      else if (isOnMyStage) btnHtml = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${judgeStage})">ЗАСЧИТАТЬ</button>`;
+      else if (isOnMyStage) btnHtml = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${judgeStage})">Засчитать: ${curSt.ico} ${curSt.short}</button>`;
       else btnHtml = `<button class="btn-mini ghost" disabled>ЖДЁМ</button>`;
 
       div.innerHTML = `
         <div class="judge-top">
           <div class="info">
             <div class="name">${r.fio}</div>
-            <div class="meta">${r.team} · Этап ${r.stageIdx + 1}</div>
+            <div class="meta">${r.team} · Сейчас на этапе: ${STAGES[r.stageIdx] ? STAGES[r.stageIdx].short : 'Финиш'}</div>
           </div>
         </div>
         <div class="judge-actions">
@@ -767,10 +788,11 @@
   }
 
   window.judgeComplete = async function(participantId, stageIdx) {
-    if(!confirm(`Засчитать этап ${stageIdx + 1}?`)) return;
+    const st = STAGES[stageIdx];
+    if(!confirm(`Засчитать этап "${st.short}"?`)) return;
     try {
       await set(ref(db, 'races/' + participantId + '/stageIdx'), stageIdx + 1);
-      toast(`✅ Этап ${stageIdx + 1} засчитан!`, 'ok');
+      toast(`✅ Этап "${st.short}" засчитан!`, 'ok');
       if(navigator.vibrate) navigator.vibrate(100);
     } catch(e) { toast('Ошибка!', 'err'); }
   }
