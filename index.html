@@ -120,6 +120,19 @@
     background:#0c0505;color:var(--txt);font-size:16px;outline:none;font-family:inherit;transition:.2s;
   }
   input:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(255,45,45,.12)}
+  
+  /* Ошибки валидации */
+  input.error, select.error {
+    border-color: var(--red) !important;
+    box-shadow: 0 0 0 3px rgba(255,45,45,.25) !important;
+    animation: shake .3s ease-in-out;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
   .team-row{display:flex;gap:8px}
   .team-row input{flex:1}
   .quick-teams{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
@@ -146,7 +159,15 @@
   .btn.go{background:linear-gradient(180deg,#ff4a4a,#d01e1e);color:#fff;box-shadow:0 10px 26px -10px var(--red-glow)}
   .btn.ghost{background:#120707;border-color:var(--line2);color:var(--txt)}
   .btn.danger{background:transparent;border-color:#5a1a1a;color:#ff6b6b}
-  .btn:disabled{opacity:.4;pointer-events:none}
+  
+  /* Неактивная кнопка старта */
+  .btn.primary:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(0.6);
+    box-shadow: none;
+  }
+
   .btn.pause-btn{
     background:linear-gradient(180deg,#2a0d0d,#1a0707);border:1px solid var(--red-d);color:var(--red);
     box-shadow:0 0 18px -8px var(--red-glow);
@@ -164,7 +185,7 @@
   .pen{font-family:var(--mono);font-size:13px;color:var(--red);margin-top:6px;min-height:16px;font-weight:700;animation:penPulse 1.2s ease-in-out infinite}
   @keyframes penPulse{0%,100%{opacity:.85}50%{opacity:1;text-shadow:0 0 12px var(--red-glow)}}
 
-  /* Оверлей паузы — теперь он ПОВЕРХ всего, кроме верха страницы */
+  /* Оверлей паузы */
   .pause-overlay{
     display:none;position:fixed;inset:0;background:rgba(10,5,5,.92);backdrop-filter:blur(5px);
     z-index:90;flex-direction:column;align-items:center;justify-content:center;gap:16px;
@@ -176,7 +197,6 @@
   .pause-overlay .txt{font-size:20px;font-weight:900;letter-spacing:4px;color:var(--red);text-transform:uppercase}
   .pause-overlay .sub{font-size:13px;color:var(--txt);letter-spacing:.5px;text-align:center;line-height:1.5;margin-bottom:10px}
   
-  /* Кнопка возобновления в оверлее */
   .btn-resume-overlay{
     background:linear-gradient(180deg,#ff3a3a,#b81414);color:#fff;
     width:auto; min-width:200px; padding:16px 32px; font-size:18px;
@@ -302,7 +322,7 @@
   </div>
 </section>
 
-<!-- ОВЕРЛЕЙ ПАУЗЫ (вынесен из карточки на уровень body) -->
+<!-- ОВЕРЛЕЙ ПАУЗЫ -->
 <div class="pause-overlay" id="pause-overlay">
   <div class="icon">⏸</div>
   <div class="txt">ПАУЗА</div>
@@ -320,23 +340,27 @@
     <div class="card">
       <h2>Регистрация участника</h2>
       <p class="muted">Тактическая гонка с препятствиями и стрельбой. Зачёт по времени + штрафы. Медали — по категориям.</p>
+      
       <label for="fio">ФИО участника</label>
-      <input id="fio" placeholder="Иванов Иван" autocomplete="name" />
+      <input id="fio" placeholder="Иванов Иван" autocomplete="name" oninput="checkForm()" />
+      
       <label for="cat">Категория</label>
       <select id="cat">
         <option value="junior">Юниор (до 18)</option>
         <option value="adult" selected>Взрослый (18–39)</option>
         <option value="veteran">Ветеран (40+)</option>
       </select>
+      
       <label for="team">Команда (можно вписать любую)</label>
-      <div class="team-row"><input id="team" placeholder="Название команды" autocomplete="organization" /></div>
+      <div class="team-row"><input id="team" placeholder="Название команды" autocomplete="organization" oninput="checkForm()" /></div>
       <div class="quick-teams">
         <button type="button" data-team="Сочи Пульс">Сочи Пульс</button>
         <button type="button" data-team="СК Скорпион">СК Скорпион</button>
         <button type="button" data-team="Гость">Гость</button>
       </div>
+      
       <div style="height:16px"></div>
-      <button class="btn primary" onclick="startRun()">▶ СТАРТ ТРАССЫ</button>
+      <button class="btn primary" id="btn-start" onclick="startRun()" disabled>▶ СТАРТ ТРАССЫ</button>
       <div class="pill-note"><span>🩸</span><div><b>Штрафы:</b> промах +10 с · эвакуация +15 с · жгут +15 с · обход препятствия +30 с.</div></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="showResults()">🏆 Результаты</button></div>
@@ -483,10 +507,38 @@ function elapsedMs(){
 }
 function isPaused(){ return !!(state && state.pauseStartedAt); }
 
+/* ---------- ВАЛИДАЦИЯ ФОРМЫ ---------- */
+function checkForm() {
+  const fio = $('fio').value.trim();
+  const team = $('team').value.trim();
+  const btn = $('btn-start');
+  
+  // Если есть ошибки, убираем их при вводе
+  if (fio) $('fio').classList.remove('error');
+  if (team) $('team').classList.remove('error');
+  
+  // Кнопка активна, только если оба поля заполнены
+  if (fio && team) {
+    btn.disabled = false;
+  } else {
+    btn.disabled = true;
+  }
+}
+
 /* ---------- START ---------- */
 function startRun(){
-  const fio=$('fio').value.trim() || 'Участник';
-  const team=$('team').value.trim() || 'Гость';
+  const fio=$('fio').value.trim();
+  const team=$('team').value.trim();
+  
+  // Повторная проверка на всякий случай
+  if (!fio || !team) {
+    if (!fio) $('fio').classList.add('error');
+    if (!team) $('team').classList.add('error');
+    toast('Заполните ФИО и Команду!', true);
+    vibrate([20, 50, 20]);
+    return;
+  }
+
   state = {
     fio, cat: $('cat').value, team,
     startAt: Date.now(),
@@ -548,10 +600,6 @@ function pauseRun(){
   $('btn-pause').innerHTML = '▶ ПРОДОЛЖИТЬ';
   $('btn-pause').classList.add('go');
   $('btn-pause').classList.remove('pause-btn');
-  
-  // На паузе отключаем только визуальную кнопку этапа, но клик будет перехвачен
-  $('btn-next').disabled = false; 
-  
   vibrate([20,60,20]);
   toast('⏸ Пауза — таймер остановлен');
 }
@@ -712,7 +760,6 @@ function recalcPistol(st){
 
 /* ---------- COMPLETE STAGE ---------- */
 function completeStage(){
-  // Если на паузе, не даём завершить этап, показываем предупреждение
   if(isPaused()){ 
     toast('Сначала снимите паузу!', true); 
     return; 
@@ -877,7 +924,7 @@ document.addEventListener('visibilitychange', ()=>{
 
   if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     const swCode = `
-      const CACHE='scorpion-tb-v4';
+      const CACHE='scorpion-tb-v5';
       const SHELL=[location.href];
       self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL).catch(()=>{}))); });
       self.addEventListener('activate',e=>{ e.waitUntil(self.clients.claim()); });
@@ -902,6 +949,7 @@ document.addEventListener('visibilitychange', ()=>{
       document.querySelectorAll('.quick-teams button').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');
       $('team').value = b.dataset.team;
+      checkForm(); // проверяем форму при клике на чипс
     });
   });
 })();
@@ -915,6 +963,7 @@ function skipSplash(){
   setTimeout(() => {
     splash.style.display = 'none';
     show('scr-start');
+    checkForm(); // проверяем при старте
   }, 500);
 }
 
