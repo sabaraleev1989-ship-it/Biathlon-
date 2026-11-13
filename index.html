@@ -712,12 +712,18 @@
     chat.innerHTML = '';
     messages.forEach(m => {
       if (m.type === 'voice') {
+        let audioUrl = m.url;
+        // Если аудио разбито на чанки, склеиваем
+        if (m.chunks) {
+          audioUrl = m.chunks.join('');
+        }
+        
         // Встраиваем нативный аудиоплеер
         chat.innerHTML += `
           <div class="msg voice">
             <span class="author">${m.author} [${m.timeStr}]</span>
             <div>🎙 Голосовое сообщение:</div>
-            <audio class="audio-player" controls src="${m.url}"></audio>
+            <audio class="audio-player" controls src="${audioUrl}"></audio>
           </div>
         `;
       } else {
@@ -791,10 +797,17 @@
       reader.onloadend = async () => {
         const base64Audio = reader.result;
         
-        // Отправляем в базу данных
+        // Разбиваем длинную строку на кусочки по 8000 символов
+        const chunkSize = 8000;
+        const chunks = [];
+        for (let i = 0; i < base64Audio.length; i += chunkSize) {
+          chunks.push(base64Audio.substring(i, i + chunkSize));
+        }
+        
+        // Отправляем в базу данных массив кусочков
         await push(ref(db, 'radio_messages'), {
           type: 'voice',
-          url: base64Audio,
+          chunks: chunks,
           author: currentJudgeName || 'Судья',
           time: Date.now(),
           timeStr: getTimeNow()
