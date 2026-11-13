@@ -88,7 +88,6 @@
   .judge-top .time{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--red); text-align:right; line-height: 1.2;}
   .judge-top .pen {font-size:11px; color:var(--red); font-weight:bold;}
 
-  /* Индикатор связи - перенесен и уменьшен */
   .connection { position: absolute; top: 10px; left: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green-glow); z-index: 10; }
   .connection.offline { background: var(--red); box-shadow: 0 0 6px var(--red-glow); animation: blink 1s infinite; }
 
@@ -345,6 +344,9 @@
   </div>
 </div>
 
+<!-- Скрытое аудио для разблокировки автовоспроизведения -->
+<audio id="global-audio" style="display:none;"></audio>
+
 <div class="app">
   <!-- ROLE SELECT -->
   <section id="scr-role" class="screen">
@@ -448,7 +450,6 @@
       <h2>Ваш этап</h2>
       <div style="height:10px"></div>
       <label>Закрепленный этап</label>
-      <!-- Выбор этапа теперь заблокирован после выбора -->
       <select id="judge-stage-select" onchange="setJudgeStage()" disabled>
         <option value="">-- Выберите этап --</option>
       </select>
@@ -508,11 +509,9 @@
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, set, onValue, remove, update, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-  const storage = getStorage(app);
 
   /* ============================================================
      2. КОНСТАНТЫ И ЭТАПЫ
@@ -551,7 +550,7 @@
   let mediaRecorder = null;
   let audioChunks = [];
   let isRecording = false;
-  let lastMsgCount = 0;
+  let lastMsgTime = 0;
   let isRadioOpen = false;
 
   /* ============================================================
@@ -650,7 +649,7 @@
   }
 
   /* ============================================================
-     4. РАЦИЯ (АУДИО + ТЕКСТ)
+     4. РАЦИЯ (АУДИО + ТЕКСТ) — ИСПРАВЛЕННАЯ
      ============================================================ */
   
   async function initMicrophone() {
@@ -671,13 +670,25 @@
     }
   }
 
+  // Разблокировка аудио при открытии рации (трюк для iOS/Android)
+  function unlockAudio() {
+    const audio = $('global-audio');
+    audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+    audio.play().catch(() => {});
+  }
+
   window.toggleRadio = function() {
     isRadioOpen = !isRadioOpen;
     $('radio-modal').classList.toggle('on', isRadioOpen);
     
     if (isRadioOpen) {
+      unlockAudio(); // Разрешаем звук
       $('radio-badge').style.display = 'none';
       scrollChatToBottom();
+      
+      // При открытии запоминаем текущее время, чтобы не проигрывать старые
+      lastMsgTime = Date.now();
+      
       onValue(ref(db, 'radio_messages'), renderRadioChat);
     }
   }
@@ -692,8 +703,16 @@
     const messages = Object.values(data).sort((a,b) => a.time - b.time);
     const chat = $('radio-chat');
     
-    if (messages.length === lastMsgCount) return;
-    lastMsgCount = messages.length;
+    // Проверяем, есть ли новое голосовое, которое мы еще не слышали
+    let newVoiceMsg = null;
+    messages.forEach(m => {
+      if (m.time > lastMsgTime && m.type === 'voice') {
+        newVoiceMsg = m;
+        lastMsgTime = m.time;
+      } else if (m.time > lastMsgTime) {
+        lastMsgTime = m.time; // Обновляем время для текстовых
+      }
+    });
 
     chat.innerHTML = '';
     messages.forEach(m => {
@@ -718,6 +737,12 @@
     });
     scrollChatToBottom();
 
+    // Если есть новое голосовое и рация открыта — проигрываем!
+    if (newVoiceMsg && isRadioOpen) {
+      playAudio(newVoiceMsg.url);
+    }
+
+    // Уведомление, если рация закрыта
     if (!isRadioOpen && messages.length > 0) {
       $('radio-badge').style.display = 'block';
       if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -725,8 +750,9 @@
   }
 
   window.playAudio = function(url) {
-    const audio = new Audio(url);
-    audio.play().catch(e => toast('Нажмите еще раз', 'err'));
+    const audio = $('global-audio');
+    audio.src = url;
+    audio.play().catch(e => toast('Нажмите на сообщение для прослушивания', 'err'));
   }
 
   window.sendTextMsg = async function() {
@@ -781,19 +807,21 @@
   async function uploadVoiceMessage(blob) {
     toast('Загрузка на сервер...', 'ok');
     try {
-      const filename = `radio/${Date.now()}.webm`;
-      const fileRef = storageRef(storage, filename);
-      await uploadBytes(fileRef, blob);
-      const url = await getDownloadURL(fileRef);
-
-      await push(ref(db, 'radio_messages'), {
-        type: 'voice',
-        url: url,
-        author: currentJudgeName || 'Судья',
-        time: Date.now(),
-        timeStr: getTimeNow()
-      });
-      toast('Отправлено!', 'ok');
+      // Конвертируем аудио в Base64 и отправляем прямо в базу
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64Audio = reader.result;
+        
+        await push(ref(db, 'radio_messages'), {
+          type: 'voice',
+          url: base64Audio, // Ссылка на base64 данные
+          author: currentJudgeName || 'Судья',
+          time: Date.now(),
+          timeStr: getTimeNow()
+        });
+        toast('Отправлено!', 'ok');
+      };
     } catch(e) {
       toast('Ошибка загрузки аудио', 'err');
     }
@@ -1174,7 +1202,6 @@
   let judgeStage = null;
 
   window.promptJudgeLogin = function() {
-    // Восстанавливаем из сессии, если уже входили
     if (sessionStorage.getItem('judge_name') && sessionStorage.getItem('judge_stage')) {
       currentJudgeName = sessionStorage.getItem('judge_name');
       judgeStage = parseInt(sessionStorage.getItem('judge_stage'));
@@ -1190,7 +1217,6 @@
     currentJudgeName = name;
     $('judge-name-display').textContent = currentJudgeName;
     
-    // Принудительно открываем выбор этапа
     openJudgeMode(true);
   }
 
@@ -1207,7 +1233,6 @@
     show('scr-judge');
     initJudgeSelect();
     
-    // Если этап уже выбран в сессии, блокируем select
     const savedStage = sessionStorage.getItem('judge_stage');
     if (savedStage !== null && !forceSelect) {
       judgeStage = parseInt(savedStage);
@@ -1234,14 +1259,11 @@
     });
   }
 
-  // Вызывается при выборе этапа
   window.setJudgeStage = function() {
     const val = $('judge-stage-select').value;
     if (val === '') return;
     
     judgeStage = parseInt(val);
-    
-    // СОХРАНЯЕМ И БЛОКИРУЕМ
     sessionStorage.setItem('judge_stage', judgeStage);
     $('judge-stage-select').disabled = true;
     toast(`Этап закреплен! Смена только через выход.`, 'ok');
