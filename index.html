@@ -85,6 +85,14 @@
   .judge-top .meta{font-size:11px;color:var(--dim);margin-top:2px}
   .judge-top .time{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--red); text-align:right; line-height: 1.2;}
   .judge-top .pen {font-size:11px; color:var(--red); font-weight:bold;}
+
+  /* История штрафов */
+  .penalty-list { background: #120707; border: 1px solid var(--line2); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+  .penalty-item { font-size: 11px; color: var(--txt); display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 5px 0; }
+  .penalty-item:last-child { border-bottom: none; }
+  .penalty-item .reason { color: var(--red); font-weight: 700; }
+  .penalty-item .judge { color: var(--blue); font-weight: 700; }
+  .penalty-item .time { color: var(--dim); font-family: var(--mono); font-size: 10px; }
   
   /* Визуализация этапов */
   .stages-map{display:flex; flex-direction:column; gap:6px; margin: 10px 0;}
@@ -205,7 +213,7 @@
       <p class="muted">Главный судья регистрирует и запускает по очереди. Судьи отмечают этапы.</p>
       <div style="height:16px"></div>
       <button class="btn blue" onclick="promptMainJudge()" style="margin-bottom:10px">📋 ГЛАВНЫЙ СУДЬЯ (СТАРТ/ФИНИШ)</button>
-      <button class="btn ghost" onclick="openJudgeMode()" style="margin-bottom:10px">👮 СУДЬЯ НА ЭТАПЕ</button>
+      <button class="btn ghost" onclick="promptJudgeLogin()" style="margin-bottom:10px">👮 СУДЬЯ НА ЭТАПЕ</button>
       <button class="btn primary" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
     </div>
   </section>
@@ -214,7 +222,7 @@
   <section id="scr-main-judge" class="screen">
     <header>
       <button class="back-btn" onclick="show('scr-role')">←</button>
-      <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small>ПОЛНЫЙ ДОСТУП</small></div></div>
+      <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small id="mj-name-display">ПОЛНЫЙ ДОСТУП</small></div></div>
       <button class="back-btn" onclick="logoutMainJudge()" title="Выйти из режима Гл. Судьи" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
 
@@ -292,7 +300,7 @@
   <section id="scr-judge" class="screen">
     <header>
       <button class="back-btn" onclick="show('scr-role')">←</button>
-      <div class="brand"><span class="sc">🦂</span><div>СУДЬЯ<small>ПАНЕЛЬ ЭТАПА</small></div></div>
+      <div class="brand"><span class="sc">🦂</span><div>СУДЬЯ<small id="judge-name-display">ПАНЕЛЬ ЭТАПА</small></div></div>
       <div style="width:40px"></div>
     </header>
     
@@ -345,7 +353,7 @@
   };
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, set, onValue, remove, update, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
@@ -377,6 +385,9 @@
   let mainJudgeRAF = null; 
   let judgePageRAF = null; 
 
+  // Данные судьи
+  let currentJudgeName = '';
+
   /* ============================================================
      3. УТИЛИТЫ
      ============================================================ */
@@ -400,6 +411,10 @@
     if (pauseStartedAt) ms -= (Date.now() - pauseStartedAt);
     return Math.max(0, ms);
   }
+  function getTimeNow() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
 
   function renderStagesMap(container, currentStageIdx) {
     if (!container) return;
@@ -422,30 +437,54 @@
     container.innerHTML = html;
   }
 
+  // Рендер списка штрафов
+  function renderPenalties(container, penaltiesObj) {
+    if (!container) return;
+    if (!penaltiesObj) { container.innerHTML = '<div class="muted" style="text-align:center; font-size:10px;">Штрафов нет</div>'; return; }
+    
+    let html = '';
+    Object.values(penaltiesObj).forEach(p => {
+      html += `
+        <div class="penalty-item">
+          <div>
+            <span class="reason">+${p.sec}с</span> · ${p.reason} <br>
+            <span class="judge">${p.judgeName}</span>
+          </div>
+          <div class="time">${p.timeStr}</div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
   /* ============================================================
-     4. ГЛАВНЫЙ СУДЬЯ (С ПАРОЛЕМ И СЕССИЕЙ)
+     4. ГЛАВНЫЙ СУДЬЯ
      ============================================================ */
-  
-  // Проверка пароля и сохранение в sessionStorage
   window.promptMainJudge = function() {
-    // Если сессия уже открыта — пускаем сразу
     if (sessionStorage.getItem('mj_auth') === 'true') {
+      currentJudgeName = sessionStorage.getItem('mj_name') || 'Главный судья';
+      $('mj-name-display').textContent = currentJudgeName;
       openMainJudge();
       return;
     }
     
     const pwd = prompt('Введите пароль Главного судьи:');
     if (pwd === 'scorp2015') {
+      const name = prompt('Введите ваше имя/позывной (для истории штрафов):');
+      if (!name) return;
       sessionStorage.setItem('mj_auth', 'true');
+      sessionStorage.setItem('mj_name', name);
+      currentJudgeName = name;
+      $('mj-name-display').textContent = currentJudgeName;
       openMainJudge();
     } else if (pwd !== null) {
       toast('Неверный пароль!', 'err');
     }
   }
 
-  // Выход из режима главного судьи
   window.logoutMainJudge = function() {
     sessionStorage.removeItem('mj_auth');
+    sessionStorage.removeItem('mj_name');
     toast('Вы вышли из режима Главного судьи');
     show('scr-role');
   }
@@ -478,7 +517,6 @@
         pausedTotal: 0,
         pauseStartedAt: null,
         stageIdx: 0,
-        penalties: 0,
         status: 'running'
       });
       $('m-fio').value = '';
@@ -525,6 +563,8 @@
       const isFinishedStages = r.stageIdx >= STAGES.length;
       
       let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
+      let totalPenalty = 0;
+      if (r.penalties) Object.values(r.penalties).forEach(p => totalPenalty += p.sec);
 
       let actBtn = '';
       if (r.stageIdx < STAGES.length) {
@@ -549,11 +589,15 @@
                  data-paused-total="${r.pausedTotal || 0}">
                  ${fmtShort(timeMs)}
             </div>
-            <div class="pen">Штраф: +${r.penalties || 0}с</div>
+            <div class="pen">Штраф: +${totalPenalty}с</div>
           </div>
         </div>
         
         <div class="stages-map" id="mj-map-${r.id}"></div>
+
+        <!-- История штрафов -->
+        <h4 style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;">Штрафы:</h4>
+        <div class="penalty-list" id="mj-pen-${r.id}"></div>
 
         <div class="judge-actions" style="margin-top:10px;">
           ${actBtn}
@@ -567,16 +611,29 @@
       box.appendChild(div);
       
       renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx);
+      renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties);
     });
   }
 
-  window.addPenalty = async function(id, seconds) {
+  // Универсальная функция добавления штрафа
+  window.addPenalty = async function(id, defaultSec = 10) {
+    const reason = prompt('Укажите причину штрафа (например: промах, не засчитан, ошибка техники):');
+    if (!reason) return; // отмена
+
+    const secStr = prompt('Сколько секунд штрафа?', defaultSec);
+    const sec = parseInt(secStr);
+    if (!sec || sec <= 0) return;
+
     try {
-      const snap = await new Promise(res => onValue(ref(db, 'races/' + id), res, { onlyOnce: true }));
-      const data = snap.val();
-      const current = data.penalties || 0;
-      await update(ref(db, 'races/' + id), { penalties: current + seconds });
-      toast(`Добавлен штраф +${seconds}с`, 'ok');
+      const penaltyId = 'p_' + Date.now();
+      const newPenalty = {
+        sec: sec,
+        reason: reason,
+        judgeName: currentJudgeName,
+        timeStr: getTimeNow()
+      };
+      await update(ref(db, `races/${id}/penalties/${penaltyId}`), newPenalty);
+      toast(`Штраф +${sec}с добавлен!`, 'ok');
     } catch(e) { toast('Ошибка', 'err'); }
   }
 
@@ -606,7 +663,10 @@
       const snap = await new Promise(res => onValue(ref(db, 'races/' + id), res, { onlyOnce: true }));
       const data = snap.val();
       const cleanMs = calcMs(data.startAt, data.pausedTotal, data.pauseStartedAt);
-      const totalMs = cleanMs + ((data.penalties || 0) * 1000);
+      
+      let totalPenaltySec = 0;
+      if (data.penalties) Object.values(data.penalties).forEach(p => totalPenaltySec += p.sec);
+      const totalMs = cleanMs + (totalPenaltySec * 1000);
       
       await set(ref(db, 'races/' + id), { ...data, status: 'finished', finishAt: Date.now(), cleanMs, totalMs, pauseStartedAt: null });
       toast('Участник финишировал!', 'ok');
@@ -729,9 +789,27 @@
   }
 
   /* ============================================================
-     6. СУДЬЯ НА ЭТАПЕ
+     6. СУДЬЯ НА ЭТАПЕ (С РЕГИСТРАЦИЕЙ ИМЕНИ)
      ============================================================ */
   let judgeStage = null;
+
+  window.promptJudgeLogin = function() {
+    // Если уже вводил имя - пускаем
+    if (sessionStorage.getItem('judge_name')) {
+      currentJudgeName = sessionStorage.getItem('judge_name');
+      $('judge-name-display').textContent = currentJudgeName;
+      openJudgeMode();
+      return;
+    }
+    
+    const name = prompt('Введите ваше имя/позывной:');
+    if (!name) return;
+    
+    sessionStorage.setItem('judge_name', name);
+    currentJudgeName = name;
+    $('judge-name-display').textContent = currentJudgeName;
+    openJudgeMode();
+  }
 
   window.openJudgeMode = function() {
     show('scr-judge');
@@ -794,6 +872,8 @@
       const isPaused = !!r.pauseStartedAt;
       
       let timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
+      let totalPenalty = 0;
+      if (r.penalties) Object.values(r.penalties).forEach(p => totalPenalty += p.sec);
 
       const div = document.createElement('div');
       div.className = `judge-item ${isOnMyStage ? 'ready' : ''} ${isDone ? 'done' : ''}`;
@@ -803,6 +883,11 @@
       if (isDone) btnHtml = `<button class="btn-mini act-green" disabled>✓ ПРОЙДЕН</button>`;
       else if (isOnMyStage) btnHtml = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${judgeStage})">Засчитать: ${curSt.ico} ${curSt.short}</button>`;
       else btnHtml = `<button class="btn-mini ghost" disabled>ЖДЁМ</button>`;
+
+      // Судья может давать штраф ТОЛЬКО если участник на его этапе
+      const penBtnHtml = isOnMyStage 
+        ? `<button class="btn-mini act-red" onclick="addPenalty('${r.id}', 10)">+10с Штраф</button>`
+        : `<button class="btn-mini act-red" disabled>+10с Штраф</button>`;
 
       div.innerHTML = `
         <div class="judge-top">
@@ -817,23 +902,27 @@
                  data-paused-total="${r.pausedTotal || 0}">
                  ${fmtShort(timeMs)}
             </div>
-            <div class="pen">Штраф: +${r.penalties || 0}с</div>
+            <div class="pen">Штраф: +${totalPenalty}с</div>
           </div>
         </div>
         
         <div class="stages-map" id="j-map-${r.id}"></div>
 
+        <h4 style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;">История штрафов:</h4>
+        <div class="penalty-list" id="j-pen-${r.id}"></div>
+
         <div class="judge-actions" style="margin-top:10px;">
           ${btnHtml}
         </div>
         <div class="judge-actions" style="margin-top:6px;">
-          <button class="btn-mini act-red" onclick="addPenalty('${r.id}', 10)">+10с Штраф</button>
+          ${penBtnHtml}
           <button class="btn-mini act-yellow" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
         </div>
       `;
       box.appendChild(div);
 
       renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx);
+      renderPenalties(document.getElementById(`j-pen-${r.id}`), r.penalties);
     });
   }
 
@@ -864,10 +953,13 @@
       let html = `<table><thead><tr><th>#</th><th>Участник</th><th>Штраф</th><th>Время</th></tr></thead><tbody>`;
       finished.forEach((r, i) => {
         const m = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+        let penSum = 0;
+        if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
+
         html += `<tr>
           <td>${m}</td>
           <td class="nm">${r.fio}<br><small style="color:var(--dim);font-family:var(--sans)">${r.team}</small></td>
-          <td style="color:var(--red)">+${r.penalties||0}с</td>
+          <td style="color:var(--red)">+${penSum}с</td>
           <td><b>${fmtShort(r.totalMs)}</b></td>
         </tr>`;
       });
