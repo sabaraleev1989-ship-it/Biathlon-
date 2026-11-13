@@ -25,8 +25,8 @@
     color:var(--txt);font-family:var(--sans);overscroll-behavior:none;user-select:none;overflow-x:hidden;
   }
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.35;background-image:repeating-linear-gradient(0deg,rgba(255,45,45,.03) 0 1px,transparent 1px 3px);mix-blend-mode:overlay;}
-  .app{max-width:520px;margin:0 auto;padding:14px 14px calc(24px + env(safe-area-inset-bottom));min-height:100%;position:relative;z-index:2}
-  .screen{display:none;animation:fade .35s cubic-bezier(.22,.9,.3,1)}
+  .app{max-width:520px;margin:0 auto;padding:14px 14px calc(24px + env(safe-area-inset-bottom));min-height:100%;position:relative;z-index:2; display:flex; flex-direction:column;}
+  .screen{display:none;animation:fade .35s cubic-bezier(.22,.9,.3,1); flex: 1;}
   .screen.on{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
@@ -70,6 +70,8 @@
     margin: -14px;
     padding: 14px;
     position: relative;
+    display: flex;
+    flex-direction: column;
   }
   #scr-role::before {
     content: ""; position: absolute; inset: 0;
@@ -270,6 +272,78 @@
   @keyframes drawPulse { 0% { stroke-dashoffset: 800; opacity: 0; } 15% { opacity: 1; } 50% { stroke-dashoffset: 0; opacity: 1; } 85% { opacity: 1; } 100% { stroke-dashoffset: -800; opacity: 0; } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+  /* ============================================================
+     ФУТЕР С ЧАТОМ VK НА ГЛАВНОМ ЭКРАНЕ
+     ============================================================ */
+  .vk-chat-footer {
+    margin-top: auto;
+    padding-top: 30px;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+  }
+  
+  .vk-chat-content {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,0,0,0.6);
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--line2);
+    transition: 0.2s;
+  }
+  .vk-chat-footer:active .vk-chat-content {
+    transform: scale(0.98);
+    background: rgba(0,0,0,0.8);
+  }
+
+  .vk-chat-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--txt);
+  }
+  .vk-chat-title svg {
+    width: 20px;
+    height: 20px;
+    fill: #0077FF;
+    filter: drop-shadow(0 0 5px rgba(0, 119, 255, 0.5));
+  }
+
+  .vk-pulse-line {
+    width: 100%;
+    height: 20px;
+    margin-top: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .vk-pulse-line svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 4px var(--red));
+  }
+  .vk-pulse-path {
+    fill: none;
+    stroke: var(--red);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 300;
+    stroke-dashoffset: 300;
+    animation: drawVkPulse 3s linear infinite;
+  }
+  @keyframes drawVkPulse {
+    0% { stroke-dashoffset: 300; opacity: 0; }
+    20% { opacity: 1; }
+    60% { stroke-dashoffset: -300; opacity: 1; }
+    100% { stroke-dashoffset: -300; opacity: 0; }
+  }
+
 </style>
 </head>
 <body>
@@ -280,7 +354,7 @@
   <div class="splash-content">
     <div class="brutal-text splash-line-1">ОРГАНИЗАТОР</div>
     <div class="brutal-text splash-line-2">СК СКОРПИОН</div>
-    <div class="brutal-text splash-line-3">ЧАТ СТРАЙКБОЛ СОЧИ ПУЛЬС</div>
+    <div class="brutal-text splash-line-3">ЧАТ СОЧИ ПУЛЬС</div>
     <div class="pulse-container">
       <svg class="pulse-svg" viewBox="0 0 400 80" preserveAspectRatio="none">
         <path class="pulse-path" d="M 0,40 L 60,40 L 80,40 L 95,10 L 110,70 L 125,40 L 180,40 L 200,40 L 215,5 L 230,75 L 245,40 L 300,40 L 320,40 L 335,20 L 350,60 L 365,40 L 400,40" />
@@ -364,6 +438,23 @@
       <button class="btn ghost" onclick="promptJudgeLogin()" style="margin-bottom:10px">👮 СУДЬЯ НА ЭТАПЕ</button>
       <button class="btn primary" onclick="openRegistration()" style="margin-bottom:10px">📝 РЕГИСТРАЦИЯ НА ТУРНИР</button>
       <button class="btn green" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
+    </div>
+
+    <!-- ФУТЕР С ЧАТОМ VK -->
+    <div class="vk-chat-footer" onclick="window.open('https://vk.me/join/OkKHi03Lsxk2Npk9kd60tVlrprDeznGXo00=', '_blank')">
+      <div class="vk-chat-content">
+        <div class="vk-chat-title">
+          <!-- Иконка VK -->
+          <svg viewBox="0 0 24 24"><path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.427s-.02-1.304.576-1.496c.588-.19 1.341 1.26 2.14 1.817.605.42 1.064.328 1.064.328l2.137-.03s1.117-.07.587-.953c-.043-.072-.308-.66-1.583-1.866-1.333-1.26-1.154-1.056.451-3.234.978-1.325 1.369-2.134 1.246-2.48-.116-.33-.84-.242-.84-.242l-2.403.015s-.178-.024-.31.056c-.13.078-.213.262-.213.262s-.38 1.024-.887 1.896c-1.07 1.84-1.5 1.938-1.675 1.824-.407-.267-.305-1.075-.305-1.65 0-1.795.267-2.543-.52-2.737-.262-.064-.454-.106-1.12-.113-.856-.009-1.58.003-1.99.208-.273.137-.483.443-.355.46.158.023.516.098.706.36.245.338.237 1.097.237 1.097s.14 2.111-.33 2.372c-.324.18-.767-.187-1.718-1.87-.488-.854-.855-1.798-.855-1.798s-.07-.175-.198-.27c-.153-.114-.368-.15-.368-.15L2.49 7.23s-.36.01-.493.17c-.118.142-.01.436-.01.436s1.89 4.456 4.03 6.704c1.96 2.06 4.19 1.924 4.19 1.924h1.01z"/></svg>
+          ЧАТ СОЧИ ПУЛЬС
+        </div>
+        <!-- Анимация пульса -->
+        <div class="vk-pulse-line">
+          <svg viewBox="0 0 300 20" preserveAspectRatio="none">
+            <path class="vk-pulse-path" d="M 0,10 L 50,10 L 60,10 L 65,2 L 75,18 L 85,10 L 140,10 L 150,10 L 155,2 L 165,18 L 175,10 L 230,10 L 240,10 L 245,5 L 250,15 L 260,10 L 300,10" />
+          </svg>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -774,7 +865,6 @@
 
   // Настройки (Только для Главного судьи)
   window.openSettingsModal = function() {
-    // Загружаем текущий пароль судьи из базы (или ставим дефолтный)
     onValue(ref(db, 'settings/judge_password'), (snap) => {
       const pwd = snap.val() || 'judge2026';
       $('set-judge-password').value = pwd;
@@ -1248,12 +1338,11 @@
   }
 
   /* ============================================================
-     8. СУДЬЯ НА ЭТАПЕ (С ПАРОЛЕМ)
+     8. СУДЬЯ НА ЭТАПЕ
      ============================================================ */
   let judgeStage = null;
 
   window.promptJudgeLogin = async function() {
-    // Проверяем, сохранен ли пароль на этом устройстве
     if (sessionStorage.getItem('judge_name') && sessionStorage.getItem('judge_stage')) {
       currentJudgeName = sessionStorage.getItem('judge_name');
       judgeStage = parseInt(sessionStorage.getItem('judge_stage'));
@@ -1262,7 +1351,6 @@
       return;
     }
 
-    // Если нет, просим имя и пароль
     const name = prompt('Введите ваше имя/позывной:');
     if (!name) return;
 
