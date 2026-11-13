@@ -8,13 +8,13 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0505'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='%23ff2d2d'>🦂</text></svg>" />
 <style>
   :root{
-    --bg:#0a0505; --bg2:#140808; --panel:#170a0a; --panel2:#1f0d0d;
+    --bg:#0a0505; --panel:#170a0a; --panel2:#1f0d0d;
     --line:#3a1414; --line2:#4d1a1a;
     --txt:#f4e8e6; --dim:#a47d7d; --dim2:#6e4a4a;
     --red:#ff2d2d; --red-d:#c41a1a; --red-glow:rgba(255,45,45,.55);
     --green:#4ade80; --green-glow:rgba(74,222,128,.4);
     --blue:#60a5fa; --blue-glow:rgba(96,165,250,.4);
-    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --gold:#ffcf3f; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -35,6 +35,9 @@
   .brand .sc{font-size:24px;filter:drop-shadow(0 0 10px var(--red-glow));animation:scorpionPulse 2.4s infinite}
   @keyframes scorpionPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
   .brand small{display:block;font-weight:600;color:var(--dim);font-size:9.5px;letter-spacing:2px;margin-top:1px}
+  
+  .back-btn{width:auto;padding:9px 14px;font-size:18px;color:var(--txt);background:var(--panel);border:1px solid var(--line2);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .back-btn:active{transform:scale(.95)}
 
   .card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:16px;position:relative;overflow:hidden;box-shadow:0 10px 30px -18px #000;}
   .card::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--red),transparent);opacity:.55;}
@@ -92,13 +95,12 @@
   td{padding:10px 6px;border-bottom:1px solid #240b0b;font-family:var(--mono);font-size:13px}
   td.nm{font-family:inherit;font-weight:700}
 
-  .footer-note{text-align:center;color:var(--dim2);font-size:10px;letter-spacing:2px;margin-top:18px}
   .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:#1c0808;border:1px solid var(--red);color:var(--txt);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:999;text-align:center;max-width:90%;}
   .toast.on{opacity:1;transform:translate(-50%,0)}
   .toast.err{border-color:var(--red);background:#2a0808}
   .toast.ok{border-color:var(--green);background:#0a2a10}
 
-  /* ============ SPLASH (ВОЗВРАЩЕН) ============ */
+  /* ============ SPLASH ============ */
   #scr-splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(circle at 50% 42%,#1f0707 0%,#0a0505 55%,#000 100%);overflow:hidden;
     transition:opacity .5s ease, visibility .5s ease;}
@@ -186,7 +188,7 @@
       <h2>Кто вы на трассе?</h2>
       <p class="muted">Главный судья регистрирует и запускает. Судьи отмечают этапы. Участник видит свой прогресс.</p>
       <div style="height:16px"></div>
-      <button class="btn blue" onclick="openMainJudge()" style="margin-bottom:10px">📋 ГЛАВНЫЙ СУДЬЯ (СТАРТ/ФИНИШ)</button>
+      <button class="btn blue" onclick="promptMainJudge()" style="margin-bottom:10px">📋 ГЛАВНЫЙ СУДЬЯ (СТАРТ/ФИНИШ)</button>
       <button class="btn ghost" onclick="openJudgeMode()" style="margin-bottom:10px">👮 СУДЬЯ НА ЭТАПЕ</button>
       <button class="btn primary" onclick="openParticipantMode()">🏃 Я УЧАСТНИК</button>
     </div>
@@ -195,8 +197,9 @@
   <!-- MAIN JUDGE -->
   <section id="scr-main-judge" class="screen">
     <header>
-      <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small>СТАРТ / ФИНИШ</small></div></div>
-      <button class="btn ghost" style="width:auto;padding:9px 13px;font-size:12px" onclick="location.reload()">✕</button>
+      <button class="back-btn" onclick="show('scr-role')">←</button>
+      <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small>ПОЛНЫЙ ДОСТУП</small></div></div>
+      <div style="width:40px"></div>
     </header>
 
     <div class="card">
@@ -210,8 +213,15 @@
     </div>
 
     <div class="card" style="margin-top:12px">
-      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Бегуны на дистанции</h3>
-      <div id="main-judge-list"><p class="muted">Нет активных забегов.</p></div>
+      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Управление забегами</h3>
+      
+      <!-- Главный судья теперь может выбрать этап для ручного судейства -->
+      <label>Ручное судейство этапа (если нужно)</label>
+      <select id="mj-stage-select" onchange="setMJStage()">
+        <option value="">-- Все этапы (только таймер и финиш) --</option>
+      </select>
+
+      <div id="main-judge-list" style="margin-top:12px"><p class="muted">Нет активных забегов.</p></div>
     </div>
     
     <div class="row" style="margin-top:12px">
@@ -223,8 +233,9 @@
   <!-- PARTICIPANT SELECT -->
   <section id="scr-participant-select" class="screen">
     <header>
+      <button class="back-btn" onclick="show('scr-role')">←</button>
       <div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>ВЫБЕРИТЕ СЕБЯ</small></div></div>
-      <button class="btn ghost" style="width:auto;padding:9px 13px;font-size:12px" onclick="location.reload()">✕</button>
+      <div style="width:40px"></div>
     </header>
     <div class="card">
       <h2>Кто вы?</h2>
@@ -237,8 +248,9 @@
   <!-- RACE (Participant) -->
   <section id="scr-race" class="screen">
     <header>
+      <button class="back-btn" onclick="location.reload()">←</button>
       <div class="brand"><span class="sc">🦂</span><div><span id="race-name">—</span><small id="race-meta">—</small></div></div>
-      <button class="btn ghost" style="width:auto;padding:9px 13px;font-size:12px" onclick="location.reload()">✕</button>
+      <div style="width:40px"></div>
     </header>
     <div class="card">
       <div class="timer" id="timer">00:00<span class="ms">.00</span></div>
@@ -267,8 +279,9 @@
   <!-- JUDGE -->
   <section id="scr-judge" class="screen">
     <header>
+      <button class="back-btn" onclick="show('scr-role')">←</button>
       <div class="brand"><span class="sc">🦂</span><div>СУДЬЯ<small>ПАНЕЛЬ ЭТАПА</small></div></div>
-      <button class="btn ghost" style="width:auto;padding:9px 13px;font-size:12px" onclick="location.reload()">✕</button>
+      <div style="width:40px"></div>
     </header>
     
     <div class="card">
@@ -288,12 +301,15 @@
 
   <!-- RESULTS -->
   <section id="scr-results" class="screen">
-    <header><div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>ОНЛАЙН ПРОТОКОЛ</small></div></div></header>
+    <header>
+      <button class="back-btn" onclick="location.reload()">←</button>
+      <div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>ПРОТОКОЛ</small></div></div>
+      <div style="width:40px"></div>
+    </header>
     <div class="card">
       <div id="tables"><p class="muted">Загрузка данных...</p></div>
     </div>
     <div class="row" style="margin-top:12px">
-      <button class="btn ghost" onclick="location.reload()">← На главную</button>
       <button class="btn danger" onclick="clearResults()">🗑️ Очистить</button>
     </div>
   </section>
@@ -341,13 +357,23 @@
   let state = null;
   let timerRAF = null;
   let currentParticipantId = null;
-  let currentPauseState = null;
+  
+  let localStartAt = 0;
+  let localPausedTotal = 0;
+  let localPauseStartedAt = null;
+
+  // Переменные для главного судьи
+  let mjStage = null;
 
   /* ============================================================
      3. УТИЛИТЫ
      ============================================================ */
   window.$ = id => document.getElementById(id);
-  window.show = function(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on'); window.scrollTo(0,0); }
+  window.show = function(id){ 
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); 
+    $(id).classList.add('on'); 
+    window.scrollTo(0,0); 
+  }
   
   let toastT = null;
   window.toast = function(msg, type='') {
@@ -357,13 +383,44 @@
   
   function fmt(ms){ if(ms<0) ms=0; const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), cs=Math.floor(ms%1000/10); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}<span class="ms">.${String(cs).padStart(2,'0')}</span>`; }
   function fmtShort(ms){ const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,'0')}`; }
+  function calcMs(start, pausedTotal, pauseStartedAt) {
+    let ms = Date.now() - start - (pausedTotal || 0);
+    if (pauseStartedAt) ms -= (Date.now() - pauseStartedAt);
+    return Math.max(0, ms);
+  }
 
   /* ============================================================
-     4. ГЛАВНЫЙ СУДЬЯ (СТАРТ / ФИНИШ)
+     4. ГЛАВНЫЙ СУДЬЯ (СТАРТ / ФИНИШ + СУДЕЙСТВО)
      ============================================================ */
+  
+  // Запрос пароля
+  window.promptMainJudge = function() {
+    const pwd = prompt('Введите пароль Главного судьи:');
+    if (pwd === 'scorp2015') {
+      openMainJudge();
+    } else if (pwd !== null) {
+      toast('Неверный пароль!', 'err');
+    }
+  }
+
   window.openMainJudge = function() {
     show('scr-main-judge');
+    initMJSelect();
     listenMainJudgeRaces();
+  }
+
+  function initMJSelect() {
+    const sel = $('mj-stage-select');
+    sel.innerHTML = '<option value="">-- Все этапы (только таймер и финиш) --</option>';
+    STAGES.forEach((st, i) => {
+      sel.innerHTML += `<option value="${i}">Этап ${i+1}: ${st.title}</option>`;
+    });
+  }
+
+  window.setMJStage = function() {
+    const val = $('mj-stage-select').value;
+    mjStage = val === '' ? null : parseInt(val);
+    renderMainJudgeList(); // перерисовываем список с учетом выбранного этапа
   }
 
   window.registerAndStart = async function() {
@@ -390,32 +447,49 @@
   function listenMainJudgeRaces() {
     onValue(ref(db, 'races'), (snap) => {
       const data = snap.val() || {};
-      const active = Object.values(data).filter(r => r.status === 'running');
-      const box = $('main-judge-list');
-      
-      if (!active.length) { box.innerHTML = '<p class="muted">Нет активных забегов.</p>'; return; }
-      
-      box.innerHTML = '';
-      active.forEach(r => {
-        const isPaused = !!r.pauseStartedAt;
-        let timeMs = Date.now() - r.startAt - (r.pausedTotal || 0);
-        if (isPaused) timeMs -= (Date.now() - r.pauseStartedAt);
+      window.allRacesData = data; // кэшируем для рендера
+      renderMainJudgeList();
+    });
+  }
 
-        const div = document.createElement('div');
-        div.className = 'judge-item';
-        div.innerHTML = `
-          <div class="info">
-            <div class="name">${r.fio}</div>
-            <div class="meta">${r.team} · Этап ${r.stageIdx + 1}</div>
-          </div>
-          <div class="time">${fmtShort(timeMs)}</div>
-          <div style="display:flex;flex-direction:column;gap:5px">
-            <button class="judge-btn ${isPaused?'yellow':'green'}" onclick="togglePause('${r.id}', '${isPaused}')">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
-            <button class="judge-btn" onclick="finishParticipant('${r.id}')">🏁 ФИНИШ</button>
-          </div>
-        `;
-        box.appendChild(div);
-      });
+  function renderMainJudgeList() {
+    const data = window.allRacesData || {};
+    const active = Object.values(data).filter(r => r.status === 'running');
+    const box = $('main-judge-list');
+    
+    if (!active.length) { box.innerHTML = '<p class="muted">Нет активных забегов.</p>'; return; }
+    
+    box.innerHTML = '';
+    active.forEach(r => {
+      const isPaused = !!r.pauseStartedAt;
+      const timeMs = calcMs(r.startAt, r.pausedTotal, r.pauseStartedAt);
+      
+      // Логика для отображения кнопки "Засчитать этап", если Главный судья выбрал конкретный этап
+      let stageActionHtml = '';
+      if (mjStage !== null) {
+        const isDone = r.stageIdx > mjStage;
+        const isOnMyStage = r.stageIdx === mjStage;
+        
+        if (isDone) stageActionHtml = `<button class="judge-btn green" disabled>✓ ЭТАП ПРОЙДЕН</button>`;
+        else if (isOnMyStage) stageActionHtml = `<button class="judge-btn yellow" onclick="judgeComplete('${r.id}', ${mjStage})">ЗАСЧИТАТЬ ЭТАП</button>`;
+        else stageActionHtml = `<button class="judge-btn" disabled>ЖДЁМ ЭТАП ${mjStage+1}</button>`;
+      }
+
+      const div = document.createElement('div');
+      div.className = `judge-item ${mjStage !== null && r.stageIdx === mjStage ? 'ready' : ''}`;
+      div.innerHTML = `
+        <div class="info">
+          <div class="name">${r.fio}</div>
+          <div class="meta">${r.team} · Этап ${r.stageIdx + 1}</div>
+        </div>
+        <div class="time">${fmtShort(timeMs)}</div>
+        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+          ${stageActionHtml}
+          <button class="judge-btn ${isPaused?'yellow':'green'}" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
+          <button class="judge-btn" onclick="finishParticipant('${r.id}')">🏁 ФИНИШ</button>
+        </div>
+      `;
+      box.appendChild(div);
     });
   }
 
@@ -423,8 +497,7 @@
     try {
       const snap = await new Promise(res => onValue(ref(db, 'races/' + id), res, { onlyOnce: true }));
       const data = snap.val();
-      if (isPaused === 'true') {
-        // Возобновляем
+      if (isPaused) {
         const pausedMs = Date.now() - data.pauseStartedAt;
         await update(ref(db, 'races/' + id), {
           pausedTotal: (data.pausedTotal || 0) + pausedMs,
@@ -432,7 +505,6 @@
         });
         toast('▶ Таймер продолжен', 'ok');
       } else {
-        // Ставим паузу
         await update(ref(db, 'races/' + id), {
           pauseStartedAt: Date.now()
         });
@@ -446,8 +518,7 @@
     try {
       const snap = await new Promise(res => onValue(ref(db, 'races/' + id), res, { onlyOnce: true }));
       const data = snap.val();
-      let cleanMs = Date.now() - data.startAt - (data.pausedTotal || 0);
-      if (data.pauseStartedAt) cleanMs -= (Date.now() - data.pauseStartedAt);
+      const cleanMs = calcMs(data.startAt, data.pausedTotal, data.pauseStartedAt);
       
       await set(ref(db, 'races/' + id), { ...data, status: 'finished', finishAt: Date.now(), cleanMs, pauseStartedAt: null });
       toast('Участник финишировал!', 'ok');
@@ -484,6 +555,7 @@
 
   window.startParticipantRace = function(id) {
     currentParticipantId = id;
+    state = null; 
     show('scr-race');
     
     onValue(ref(db, 'races/' + id), (snap) => {
@@ -491,15 +563,17 @@
       if(!data) return;
       
       if (state === null) {
-        state = { id, startAt: data.startAt, fio: data.fio, team: data.team, stageIdx: data.stageIdx };
+        state = { id, fio: data.fio, team: data.team, stageIdx: data.stageIdx };
         $('race-name').textContent = data.fio;
         $('race-meta').textContent = data.team;
         buildPips();
         renderStage();
-        startTimer();
+        startLocalTimer();
       }
       
-      currentPauseState = data.pauseStartedAt;
+      localStartAt = data.startAt;
+      localPausedTotal = data.pausedTotal || 0;
+      localPauseStartedAt = data.pauseStartedAt;
       
       if (data.status === 'finished') {
         finishRunLocal(data.cleanMs);
@@ -519,12 +593,12 @@
     });
   }
 
-  function startTimer() {
+  function startLocalTimer() {
     cancelAnimationFrame(timerRAF);
     const tick = () => {
       if(!state) return;
       
-      const isPaused = !!currentPauseState;
+      const isPaused = !!localPauseStartedAt;
       const el = $('timer');
       
       if (isPaused) {
@@ -535,15 +609,9 @@
         $('timer-status').textContent = 'ОБЩЕЕ ВРЕМЯ';
       }
 
-      // Запрашиваем актуальные данные из state (они обновляются в onValue)
-      onValue(ref(db, 'races/' + state.id), (snap) => {
-         const d = snap.val();
-         if(!d) return;
-         let ms = Date.now() - d.startAt - (d.pausedTotal || 0);
-         if (d.pauseStartedAt) ms -= (Date.now() - d.pauseStartedAt);
-         $('timer').innerHTML = fmt(ms);
-      }, { onlyOnce: true });
-
+      const ms = calcMs(localStartAt, localPausedTotal, localPauseStartedAt);
+      el.innerHTML = fmt(ms);
+      
       timerRAF = requestAnimationFrame(tick);
     };
     tick();
@@ -573,6 +641,7 @@
     cancelAnimationFrame(timerRAF);
     $('timer').innerHTML = fmt(cleanMs);
     $('timer-status').textContent = '🏁 ФИНИШ';
+    $('timer').classList.remove('paused');
     toast('🏁 ФИНИШ! Ваше время: ' + fmtShort(cleanMs), 'ok');
   }
 
@@ -638,7 +707,7 @@
         </div>
         <div style="display:flex;flex-direction:column;gap:5px">
           ${btnHtml}
-          <button class="judge-btn ${isPaused?'yellow':'ghost'}" onclick="togglePause('${r.id}', '${isPaused}')" style="font-size:10px;padding:6px">${isPaused?'▶':'⏸'} ПАУЗА</button>
+          <button class="judge-btn ${isPaused?'yellow':''}" onclick="togglePause('${r.id}', ${isPaused})" style="font-size:10px;padding:6px;background:${isPaused?'#ffcf3f':'#2a0d0d'};color:${isPaused?'#000':'#fff'}">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
         </div>
       `;
       box.appendChild(div);
@@ -649,7 +718,7 @@
     if(!confirm('Засчитать этап?')) return;
     try {
       await set(ref(db, 'races/' + participantId + '/stageIdx'), stageIdx + 1);
-      toast('✅ Участник отправлен дальше!', 'ok');
+      toast('✅ Этап засчитан!', 'ok');
       if(navigator.vibrate) navigator.vibrate(100);
     } catch(e) { toast('Ошибка!', 'err'); }
   }
