@@ -628,11 +628,10 @@
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
   });
 
-  // Отрисовка карты этапов с ЛАЙВОВЫМ таймером для текущего этапа
+  // Отрисовка карты этапов с ЛАЙВОВЫМ таймером
   function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null) {
     if (!container) return;
     
-    // Если у нас есть время старта текущего этапа, запускаем анимацию
     if (container._timerRAF) cancelAnimationFrame(container._timerRAF);
 
     const draw = () => {
@@ -647,7 +646,6 @@
           lapTimeStr = laps[i] ? fmtLap(laps[i]) : '';
         } else if (i === currentStageIdx) { 
           cls = 'now'; stIco = '⏳'; 
-          // Лайвовый таймер для текущего этапа
           if (stageStartTime) {
             const ms = Date.now() - stageStartTime;
             lapTimeStr = fmtLap(ms);
@@ -669,7 +667,6 @@
       });
       container.innerHTML = html;
       
-      // Если сейчас есть активный этап, продолжаем обновлять
       if (stageStartTime && currentStageIdx < STAGES.length) {
         container._timerRAF = requestAnimationFrame(draw);
       }
@@ -702,14 +699,13 @@
   }
 
   /* ============================================================
-     4. РАЦИЯ (СЖАТИЕ В BASE64)
+     4. РАЦИЯ (ЗАГРУЗКА НА TMPFILES.ORG)
      ============================================================ */
   
   async function initMicrophone() {
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Максимально сжимаем битрейт для экономии места в базе
-      mediaRecorder = new MediaRecorder(mediaStream, { audioBitsPerSecond: 16000 });
+      mediaRecorder = new MediaRecorder(mediaStream, { audioBitsPerSecond: 32000 });
       
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
@@ -765,14 +761,11 @@
     chat.innerHTML = '';
     messages.forEach(m => {
       if (m.type === 'voice') {
-        let audioUrl = m.url;
-        if (m.chunks) audioUrl = m.chunks.join(''); // Склеиваем
-        
         chat.innerHTML += `
           <div class="msg voice">
             <span class="author">${m.author} [${m.timeStr}]</span>
             <div>🎙 Голосовое сообщение:</div>
-            <audio class="audio-player" controls src="${audioUrl}"></audio>
+            <audio class="audio-player" controls src="${m.url}"></audio>
           </div>
         `;
       } else {
@@ -814,7 +807,7 @@
     e.preventDefault();
     
     if (!isRecording) {
-      playBeep(800, 0.1); // Звук старта
+      playBeep(800, 0.1);
       const ok = await initMicrophone();
       if (!ok) return;
       
@@ -827,7 +820,7 @@
       if(navigator.vibrate) navigator.vibrate(50);
       
     } else {
-      playBeep(600, 0.15); // Звук стопа
+      playBeep(600, 0.15);
       isRecording = false;
       btnPtt.classList.remove('recording');
       $('ptt-label').textContent = 'Отправка...';
@@ -841,33 +834,36 @@
   });
 
   async function uploadVoiceMessage(blob) {
-    toast('Обработка аудио...', 'ok');
+    toast('Загрузка на сервер...', 'ok');
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64Audio = reader.result;
+      const formData = new FormData();
+      formData.append('file', blob, 'voice.webm');
+
+      const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const json = await response.json();
+      
+      if (json.data && json.data.url) {
+        // Меняем страницу просмотра на прямую ссылку на файл
+        const directUrl = json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
         
-        // Разбиваем длинную строку на кусочки по 8000 символов
-        const chunkSize = 8000;
-        const chunks = [];
-        for (let i = 0; i < base64Audio.length; i += chunkSize) {
-          chunks.push(base64Audio.substring(i, i + chunkSize));
-        }
-        
-        // Отправляем в базу данных массив кусочков
         await push(ref(db, 'radio_messages'), {
           type: 'voice',
-          chunks: chunks,
+          url: directUrl,
           author: currentJudgeName || 'Судья',
           time: Date.now(),
           timeStr: getTimeNow()
         });
         toast('Отправлено!', 'ok');
-      };
+      } else {
+        toast('Ошибка сервера!', 'err');
+      }
     } catch(e) {
       console.error(e);
-      toast('Ошибка!', 'err');
+      toast('Ошибка загрузки аудио!', 'err');
     }
   }
 
@@ -937,7 +933,7 @@
         pausedTotal: 0,
         pauseStartedAt: null,
         stageIdx: 0,
-        stageStartedAt: Date.now(), // Время старта ПЕРВОГО этапа
+        stageStartedAt: Date.now(),
         status: 'running'
       });
       $('m-fio').value = '';
@@ -1032,14 +1028,12 @@
       `;
       box.appendChild(div);
       
-      // Передаем stageStartedAt для запуска живого таймера этапа
       renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx, r.laps || {}, isPaused ? null : r.stageStartedAt);
       renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties, true);
     });
     updateConnectionStatus(navigator.onLine);
   }
 
-  // ---- Модальное окно штрафа ----
   window.openPenaltyModal = function(id) {
     currentPenaltyTargetId = id;
     $('pen-reason').value = 'Промах';
@@ -1097,14 +1091,15 @@
         const pausedMs = Date.now() - data.pauseStartedAt;
         await update(ref(db, 'races/' + id), {
           pausedTotal: (data.pausedTotal || 0) + pausedMs,
-          pauseStartedAt: null
+          pauseStartedAt: null,
+          stageStartedAt: Date.now() // При возобновлении таймер этапа начинается заново с 0
         });
-        toast('▶ Таймер продолжен', 'ok');
+        toast('▶ Таймер продолжен, этап начат заново', 'ok');
       } else {
         await update(ref(db, 'races/' + id), {
           pauseStartedAt: Date.now()
         });
-        toast('⏸ Таймер на паузе');
+        toast('⏸ Таймер на паузе, этап сброшен');
       }
     } catch(e) { toast('Ошибка', 'err'); }
   }
@@ -1407,7 +1402,6 @@
       `;
       box.appendChild(div);
 
-      // Запуск живого таймера для этапа
       renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx, r.laps || {}, isPaused ? null : r.stageStartedAt);
       renderPenalties(document.getElementById(`j-pen-${r.id}`), r.penalties, false);
     });
@@ -1418,18 +1412,16 @@
     const st = STAGES[stageIdx];
     if(!confirm(`Засчитать этап "${st.short}"?`)) return;
     try {
-      // Берем текущее время раунда для сохранения
       const snap = await new Promise(res => onValue(ref(db, 'races/' + participantId), res, { onlyOnce: true }));
       const data = snap.val();
       
-      // Считаем время, затраченное на этот этап (от старта этапа до сейчас)
+      // Считаем время, затраченное на этот этап
       const lapTimeMs = Date.now() - (data.stageStartedAt || data.startAt);
       
-      // Сохраняем в laps и запускаем таймер следующего этапа
       await update(ref(db, 'races/' + participantId), {
         [`laps/${stageIdx}`]: lapTimeMs,
         stageIdx: stageIdx + 1,
-        stageStartedAt: Date.now() // Обновляем время старта для нового этапа
+        stageStartedAt: Date.now() // Сброс таймера для нового этапа
       });
       
       toast(`✅ Этап "${st.short}" засчитан!`, 'ok');
@@ -1511,10 +1503,10 @@
     if (!finished.length) { toast('Нет данных для экспорта', 'err'); return; }
 
     finished.sort((a,b) => a.totalMs - b.totalMs);
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
     
-    // Заголовок таблицы с этапами
-    let header = "Место;ФИО;Команда;Штраф (сек);Итоговое время";
+    // Формируем CSV контент через Blob
+    let csvContent = "\uFEFF"; // BOM для Excel
+    let header = "Место;ФИО;Команда;Итоговое время;Штрафы (сек)";
     STAGES.forEach(st => { header += `;${st.short}`; });
     header += "\n";
     csvContent += header;
@@ -1524,9 +1516,8 @@
       if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
       const timeStr = fmtShort(r.totalMs);
       
-      let row = `${i+1};${r.fio};${r.team};${penSum};${timeStr}`;
+      let row = `${i+1};${r.fio};${r.team};${timeStr};+${penSum}с`;
       
-      // Добавляем время каждого этапа
       STAGES.forEach((st, idx) => {
         const lapMs = r.laps ? r.laps[idx] : null;
         row += `;${lapMs ? fmtLap(lapMs) : '-'}`;
@@ -1535,13 +1526,18 @@
       csvContent += row;
     });
 
-    const encodedUri = encodeURI(csvContent);
+    // Создаем файл через Blob
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", "scorpion_results.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast('Файл скачан', 'ok');
   }
 
