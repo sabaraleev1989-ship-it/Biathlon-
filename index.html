@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0a0505" />
 <title>SCORPION · TACTICAL BIATHLON</title>
+<link rel="manifest" id="manifest-link" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0505'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='%23ff2d2d'>🦂</text></svg>" />
 <style>
   :root{
@@ -75,7 +76,7 @@
   .badge{background:#1a0707;border:1px solid var(--red-d);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:1px; display:flex; align-items:center; gap:6px;}
   
   /* ============ JUDGE LIST ============ */
-  .judge-item{background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;transition:.2s}
+  .judge-item{background:#0c0505;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;transition:.2s; position:relative;}
   .judge-item.ready{border-color:var(--red);box-shadow:0 0 14px -4px var(--red-glow)}
   .judge-item.done{border-color:var(--green);opacity:.6}
   
@@ -86,13 +87,17 @@
   .judge-top .time{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--red); text-align:right; line-height: 1.2;}
   .judge-top .pen {font-size:11px; color:var(--red); font-weight:bold;}
 
+  .connection { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+  .connection.offline { background: var(--red); box-shadow: 0 0 8px var(--red-glow); animation: blink 1s infinite; }
+
   /* История штрафов */
   .penalty-list { background: #120707; border: 1px solid var(--line2); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
-  .penalty-item { font-size: 11px; color: var(--txt); display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 5px 0; }
+  .penalty-item { font-size: 11px; color: var(--txt); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding: 5px 0; }
   .penalty-item:last-child { border-bottom: none; }
   .penalty-item .reason { color: var(--red); font-weight: 700; }
-  .penalty-item .judge { color: var(--blue); font-weight: 700; }
+  .penalty-item .judge { color: var(--blue); font-weight: 700; font-size: 10px;}
   .penalty-item .time { color: var(--dim); font-family: var(--mono); font-size: 10px; }
+  .penalty-item .del-btn { background: transparent; border: none; color: var(--red); font-size: 14px; cursor: pointer; padding: 0 4px; }
   
   /* Визуализация этапов */
   .stages-map{display:flex; flex-direction:column; gap:6px; margin: 10px 0;}
@@ -104,7 +109,7 @@
   .stage-row .st { font-size: 14px; font-weight: 900;}
 
   .judge-actions{display:flex;gap:6px;flex-wrap:wrap}
-  .btn-mini{padding:10px 12px;border-radius:8px;font-weight:900;font-size:12px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px; min-height: 38px;}
+  .btn-mini{padding:14px 12px;border-radius:10px;font-weight:900;font-size:14px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px; min-height: 48px; text-align: center;}
   .btn-mini:active{transform:scale(.95)}
   .btn-mini.act{background:var(--blue);color:#fff}
   .btn-mini.act-green{background:var(--green);color:#000}
@@ -113,16 +118,87 @@
   .btn-mini.ghost{background:#1a0d0d;border:1px solid var(--line2);color:var(--txt)}
   .btn-mini:disabled{opacity:.4;pointer-events:none;filter:grayscale(0.6);}
 
+  /* ============ РАЦИЯ (FAB) ============ */
+  .radio-fab {
+    position: fixed; bottom: 20px; right: 20px; z-index: 900;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--red), #800000);
+    border: 2px solid var(--red-glow); box-shadow: 0 4px 20px rgba(255,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; cursor: pointer; transition: 0.2s;
+  }
+  .radio-fab:active { transform: scale(0.9); }
+  .radio-fab .badge-dot {
+    position: absolute; top: 0; right: 0; width: 16px; height: 16px;
+    background: var(--gold); border-radius: 50%; border: 2px solid var(--bg);
+    display: none; animation: pulse 1s infinite;
+  }
+  
+  /* Модалка рации */
+  .radio-modal {
+    position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(5px); display: none; flex-direction: column;
+    align-items: center; justify-content: flex-end; padding: 20px;
+  }
+  .radio-modal.on { display: flex; }
+  .radio-window {
+    width: 100%; max-width: 480px; background: var(--panel);
+    border: 1px solid var(--line2); border-radius: 20px; overflow: hidden;
+    display: flex; flex-direction: column; max-height: 85vh;
+  }
+  .radio-header {
+    padding: 12px 16px; background: #120707; border-bottom: 1px solid var(--line2);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .radio-title { font-weight: 900; color: var(--red); letter-spacing: 1px; text-transform: uppercase; font-size: 12px; }
+  .radio-close { background: none; border: none; color: var(--txt); font-size: 20px; cursor: pointer; }
+  
+  .radio-chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-height: 200px; }
+  .msg { padding: 8px 12px; border-radius: 10px; font-size: 13px; max-width: 85%; }
+  .msg.voice { background: #1a0707; border: 1px solid var(--red-d); display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .msg.voice:active { background: #2a0d0d; }
+  .msg.text { background: #1a1a1a; border: 1px solid #333; }
+  .msg .author { font-size: 10px; color: var(--dim); margin-bottom: 2px; display: block; font-weight: bold; }
+  .msg .content { display: flex; align-items: center; gap: 8px; }
+  
+  .radio-controls { padding: 16px; background: #120707; border-top: 1px solid var(--line2); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .btn-ptt {
+    width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--red);
+    background: #1a0707; color: var(--red); font-size: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: 0.1s; user-select: none;
+  }
+  .btn-ptt:active, .btn-ptt.recording {
+    background: var(--red); color: #fff; transform: scale(0.95);
+    box-shadow: 0 0 20px var(--red-glow);
+  }
+  .ptt-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+  
+  .text-input-row { display: flex; width: 100%; gap: 8px; }
+  .text-input-row input { flex: 1; padding: 10px; font-size: 14px; }
+  .text-input-row button { width: 50px; padding: 0; }
+
   /* ============ RESULTS ============ */
+  .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; }
+  .filter-btn { background: #120707; border: 1px solid var(--line2); color: var(--dim); padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .filter-btn.on { background: var(--red-d); border-color: var(--red); color: #fff; }
+
   table{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
   th{text-align:left;font-size:10px;color:var(--red);letter-spacing:1px;text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--line2);}
   td{padding:10px 6px;border-bottom:1px solid #240b0b;font-family:var(--mono);font-size:13px}
   td.nm{font-family:inherit;font-weight:700}
 
-  .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:#1c0808;border:1px solid var(--red);color:var(--txt);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:999;text-align:center;max-width:90%;}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:#1c0808;border:1px solid var(--red);color:var(--txt);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.28s;z-index:9999;text-align:center;max-width:90%;}
   .toast.on{opacity:1;transform:translate(-50%,0)}
   .toast.err{border-color:var(--red);background:#2a0808}
   .toast.ok{border-color:var(--green);background:#0a2a10}
+
+  /* Модальные окна */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+  .modal-overlay.on{display:flex;}
+  .modal-box{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(0,0,0,.8);}
+  .modal-title{font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;color:var(--red);}
+  .modal-actions{display:flex;gap:10px;margin-top:16px;}
 
   /* ============ SPLASH ============ */
   #scr-splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
@@ -177,6 +253,7 @@
   @keyframes loadBar{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
   .splash-hint{position:absolute;bottom:26px;left:0;right:0;text-align:center;font-size:10px;color:var(--dim2);letter-spacing:2px;animation:blink 1.8s ease-in-out infinite}
   @keyframes blink{0%,100%{opacity:.3}50%{opacity:.9}}
+  @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.7; } }
 </style>
 </head>
 <body>
@@ -204,6 +281,56 @@
   </div>
 </section>
 
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ ШТРАФОВ -->
+<div class="modal-overlay" id="penalty-modal">
+  <div class="modal-box">
+    <div class="modal-title">Назначить штраф</div>
+    
+    <label>Причина</label>
+    <select id="pen-reason" style="margin-bottom:10px;">
+      <option value="Промах">Промах</option>
+      <option value="Не засчитан этап">Не засчитан этап</option>
+      <option value="Ошибка техники">Ошибка техники</option>
+      <option value="Обход препятствия">Обход препятствия</option>
+      <option value="Другое">Другое (ввести вручную)</option>
+    </select>
+    
+    <div id="pen-custom-box" style="display:none; margin-bottom:10px;">
+      <input id="pen-custom-text" placeholder="Своя причина..." />
+    </div>
+
+    <label>Секунды</label>
+    <input id="pen-seconds" type="number" value="10" />
+
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closePenaltyModal()">Отмена</button>
+      <button class="btn primary" onclick="submitPenalty()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО РАЦИИ -->
+<div class="radio-modal" id="radio-modal">
+  <div class="radio-window">
+    <div class="radio-header">
+      <div class="radio-title">📻 Рация судей</div>
+      <button class="radio-close" onclick="toggleRadio()">✕</button>
+    </div>
+    <div class="radio-chat" id="radio-chat">
+      <div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>
+    </div>
+    <div class="radio-controls">
+      <div class="btn-ptt" id="btn-ptt">🎙</div>
+      <div class="ptt-label">Удерживай, чтобы говорить</div>
+      
+      <div class="text-input-row">
+        <input id="radio-text-input" placeholder="Текст..." onkeypress="if(event.key==='Enter') sendTextMsg()" />
+        <button class="btn primary" onclick="sendTextMsg()" style="padding:0;min-height:auto;border-radius:8px;">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="app">
   <!-- ROLE SELECT -->
   <section id="scr-role" class="screen">
@@ -223,7 +350,7 @@
     <header>
       <button class="back-btn" onclick="show('scr-role')">←</button>
       <div class="brand"><span class="sc">🦂</span><div>ГЛАВНЫЙ СУДЬЯ<small id="mj-name-display">ПОЛНЫЙ ДОСТУП</small></div></div>
-      <button class="back-btn" onclick="logoutMainJudge()" title="Выйти из режима Гл. Судьи" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
+      <button class="back-btn" onclick="logoutMainJudge()" title="Выйти" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
 
     <div class="card">
@@ -234,7 +361,6 @@
       <input id="m-team" placeholder="Название команды" />
       <div style="height:16px"></div>
       <button class="btn green" onclick="registerAndStart()">🚀 НА СТАРТ</button>
-      <p class="muted" style="margin-top:8px;font-size:10px">Если сейчас кто-то бежит, новый старт заблокируется до его финиша.</p>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -301,7 +427,7 @@
     <header>
       <button class="back-btn" onclick="show('scr-role')">←</button>
       <div class="brand"><span class="sc">🦂</span><div>СУДЬЯ<small id="judge-name-display">ПАНЕЛЬ ЭТАПА</small></div></div>
-      <div style="width:40px"></div>
+      <button class="back-btn" onclick="logoutJudge()" title="Выйти" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
     
     <div class="card">
@@ -326,13 +452,25 @@
       <div class="brand"><span class="sc">🦂</span><div>РЕЗУЛЬТАТЫ<small>ПРОТОКОЛ</small></div></div>
       <div style="width:40px"></div>
     </header>
+    
     <div class="card">
+      <div class="filter-bar" id="results-filter">
+        <button class="filter-btn on" onclick="filterResults('all')">Все</button>
+      </div>
       <div id="tables"><p class="muted">Загрузка данных...</p></div>
     </div>
+
     <div class="row" style="margin-top:12px">
+      <button class="btn ghost" onclick="exportCSV()">📥 Скачать Excel (CSV)</button>
       <button class="btn danger" onclick="clearResults()">🗑️ Очистить</button>
     </div>
   </section>
+
+  <!-- FAB РАЦИИ -->
+  <div class="radio-fab" id="radio-fab" onclick="toggleRadio()" style="display:none;">
+    📻
+    <div class="badge-dot" id="radio-badge"></div>
+  </div>
 
   <div class="toast" id="toast"></div>
 </div>
@@ -353,10 +491,12 @@
   };
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, set, onValue, remove, update, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, set, onValue, remove, update, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const storage = getStorage(app);
 
   /* ============================================================
      2. КОНСТАНТЫ И ЭТАПЫ
@@ -385,8 +525,18 @@
   let mainJudgeRAF = null; 
   let judgePageRAF = null; 
 
-  // Данные судьи
   let currentJudgeName = '';
+  let wakeLock = null;
+
+  let currentPenaltyTargetId = null;
+  let currentFilter = 'all';
+
+  // Рация
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let isRecording = false;
+  let lastMsgCount = 0;
+  let isRadioOpen = false;
 
   /* ============================================================
      3. УТИЛИТЫ
@@ -416,6 +566,29 @@
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
 
+  function updateConnectionStatus(isOnline) {
+    const dots = document.querySelectorAll('.connection');
+    if (dots.length === 0) return;
+    dots.forEach(d => {
+      if (isOnline) d.classList.remove('offline');
+      else d.classList.add('offline');
+    });
+  }
+  window.addEventListener('online', () => updateConnectionStatus(true));
+  window.addEventListener('offline', () => updateConnectionStatus(false));
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    } catch(e) {}
+  }
+  function releaseWakeLock() {
+    try { wakeLock && wakeLock.release(); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
+  });
+
   function renderStagesMap(container, currentStageIdx) {
     if (!container) return;
     let html = '';
@@ -437,20 +610,23 @@
     container.innerHTML = html;
   }
 
-  // Рендер списка штрафов
-  function renderPenalties(container, penaltiesObj) {
+  function renderPenalties(container, penaltiesObj, canDelete = false) {
     if (!container) return;
     if (!penaltiesObj) { container.innerHTML = '<div class="muted" style="text-align:center; font-size:10px;">Штрафов нет</div>'; return; }
     
     let html = '';
-    Object.values(penaltiesObj).forEach(p => {
+    Object.entries(penaltiesObj).forEach(([key, p]) => {
+      const delBtn = canDelete ? `<button class="del-btn" onclick="deletePenalty('${event.target.closest('.judge-item').dataset.id}', '${key}')">✕</button>` : '';
       html += `
         <div class="penalty-item">
           <div>
             <span class="reason">+${p.sec}с</span> · ${p.reason} <br>
             <span class="judge">${p.judgeName}</span>
           </div>
-          <div class="time">${p.timeStr}</div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div class="time">${p.timeStr}</div>
+            ${delBtn}
+          </div>
         </div>
       `;
     });
@@ -458,7 +634,170 @@
   }
 
   /* ============================================================
-     4. ГЛАВНЫЙ СУДЬЯ
+     4. РАЦИЯ (АУДИО + ТЕКСТ)
+     ============================================================ */
+  
+  // Настройка медиа-записи
+  async function setupAudio() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        audioChunks = [];
+        await uploadVoiceMessage(audioBlob);
+      };
+    } catch (e) {
+      toast('Нет доступа к микрофону!', 'err');
+    }
+  }
+
+  window.toggleRadio = function() {
+    isRadioOpen = !isRadioOpen;
+    $('radio-modal').classList.toggle('on', isRadioOpen);
+    
+    if (isRadioOpen) {
+      $('radio-badge').style.display = 'none';
+      scrollChatToBottom();
+      // Подписываемся на чат при открытии
+      onValue(ref(db, 'radio_messages'), renderRadioChat);
+    }
+  }
+
+  function scrollChatToBottom() {
+    const chat = $('radio-chat');
+    setTimeout(() => chat.scrollTop = chat.scrollHeight, 100);
+  }
+
+  // Отрисовка сообщений
+  function renderRadioChat(snap) {
+    const data = snap.val() || {};
+    const messages = Object.values(data).sort((a,b) => a.time - b.time);
+    const chat = $('radio-chat');
+    
+    if (messages.length === lastMsgCount) return; // Нет новых
+    lastMsgCount = messages.length;
+
+    chat.innerHTML = '';
+    messages.forEach(m => {
+      if (m.type === 'voice') {
+        chat.innerHTML += `
+          <div class="msg voice" onclick="playAudio('${m.url}')">
+            <div style="font-size:20px;">🔊</div>
+            <div>
+              <span class="author">${m.author} [${m.timeStr}]</span>
+              <div class="content">Голосовое сообщение</div>
+            </div>
+          </div>
+        `;
+      } else {
+        chat.innerHTML += `
+          <div class="msg text">
+            <span class="author">${m.author} [${m.timeStr}]</span>
+            <div class="content">${m.text}</div>
+          </div>
+        `;
+      }
+    });
+    scrollChatToBottom();
+
+    // Уведомление для закрытых раций
+    if (!isRadioOpen && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      $('radio-badge').style.display = 'block';
+      
+      // Вибрация для привлечения внимания
+      if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    }
+  }
+
+  window.playAudio = function(url) {
+    const audio = new Audio(url);
+    audio.play().catch(e => toast('Нажмите еще раз для прослушивания', 'err'));
+  }
+
+  // Отправка текста
+  window.sendTextMsg = async function() {
+    const text = $('radio-text-input').value.trim();
+    if (!text) return;
+    $('radio-text-input').value = '';
+
+    try {
+      await push(ref(db, 'radio_messages'), {
+        type: 'text',
+        text: text,
+        author: currentJudgeName || 'Судья',
+        time: Date.now(),
+        timeStr: getTimeNow()
+      });
+    } catch(e) { toast('Ошибка отправки', 'err'); }
+  }
+
+  // Запись голоса (PTT)
+  const btnPtt = $('btn-ptt');
+  let pttStartTime = 0;
+
+  btnPtt.addEventListener('mousedown', startRecording);
+  btnPtt.addEventListener('touchstart', startRecording, {passive: true});
+  
+  btnPtt.addEventListener('mouseup', stopRecording);
+  btnPtt.addEventListener('touchend', stopRecording);
+
+  async function startRecording(e) {
+    e.preventDefault();
+    if (isRecording) return;
+    if (!mediaRecorder) await setupAudio();
+    if (!mediaRecorder) return;
+
+    isRecording = true;
+    pttStartTime = Date.now();
+    audioChunks = [];
+    mediaRecorder.start();
+    btnPtt.classList.add('recording');
+    if(navigator.vibrate) navigator.vibrate(50);
+  }
+
+  function stopRecording(e) {
+    if (!isRecording) return;
+    isRecording = false;
+    btnPtt.classList.remove('recording');
+    
+    // Если запись меньше 1 секунды — отменяем
+    if (Date.now() - pttStartTime < 1000) {
+      mediaRecorder.stop();
+      audioChunks = [];
+      toast('Слишком коротко', 'err');
+      return;
+    }
+
+    mediaRecorder.stop();
+  }
+
+  async function uploadVoiceMessage(blob) {
+    toast('Отправка голосового...', 'ok');
+    try {
+      const filename = `radio/${Date.now()}.webm`;
+      const fileRef = storageRef(storage, filename);
+      await uploadBytes(fileRef, blob);
+      const url = await getDownloadURL(fileRef);
+
+      await push(ref(db, 'radio_messages'), {
+        type: 'voice',
+        url: url,
+        author: currentJudgeName || 'Судья',
+        time: Date.now(),
+        timeStr: getTimeNow()
+      });
+      toast('Отправлено!', 'ok');
+    } catch(e) {
+      toast('Ошибка загрузки аудио', 'err');
+    }
+  }
+
+  /* ============================================================
+     5. ГЛАВНЫЙ СУДЬЯ
      ============================================================ */
   window.promptMainJudge = function() {
     if (sessionStorage.getItem('mj_auth') === 'true') {
@@ -485,14 +824,22 @@
   window.logoutMainJudge = function() {
     sessionStorage.removeItem('mj_auth');
     sessionStorage.removeItem('mj_name');
-    toast('Вы вышли из режима Главного судьи');
+    toast('Вы вышли');
     show('scr-role');
+    $('radio-fab').style.display = 'none';
   }
 
   window.openMainJudge = function() {
     show('scr-main-judge');
     listenMainJudgeRaces();
     startMJTimer();
+    updateConnectionStatus(navigator.onLine);
+    requestWakeLock();
+    
+    // Показываем кнопку рации
+    $('radio-fab').style.display = 'flex';
+    // Подписываемся на уведомления рации
+    onValue(ref(db, 'radio_messages'), renderRadioChat);
   }
 
   window.registerAndStart = async function() {
@@ -576,7 +923,9 @@
 
       const div = document.createElement('div');
       div.className = `judge-item ${!isFinishedStages ? 'ready' : ''}`;
+      div.dataset.id = r.id;
       div.innerHTML = `
+        <div class="connection" id="conn-${r.id}"></div>
         <div class="judge-top">
           <div class="info">
             <div class="name">${r.fio}</div>
@@ -595,7 +944,6 @@
         
         <div class="stages-map" id="mj-map-${r.id}"></div>
 
-        <!-- История штрафов -->
         <h4 style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;">Штрафы:</h4>
         <div class="penalty-list" id="mj-pen-${r.id}"></div>
 
@@ -603,7 +951,7 @@
           ${actBtn}
         </div>
         <div class="judge-actions" style="margin-top:6px;">
-          <button class="btn-mini act-red" onclick="addPenalty('${r.id}', 10)">+10с Штраф</button>
+          <button class="btn-mini act-red" onclick="openPenaltyModal('${r.id}')">+10с Штраф</button>
           <button class="btn-mini act-yellow" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
           <button class="btn-mini ghost" onclick="finishParticipant('${r.id}')">🏁 ФИНИШ</button>
         </div>
@@ -611,29 +959,58 @@
       box.appendChild(div);
       
       renderStagesMap(document.getElementById(`mj-map-${r.id}`), r.stageIdx);
-      renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties);
+      renderPenalties(document.getElementById(`mj-pen-${r.id}`), r.penalties, true);
     });
+    updateConnectionStatus(navigator.onLine);
   }
 
-  // Универсальная функция добавления штрафа
-  window.addPenalty = async function(id, defaultSec = 10) {
-    const reason = prompt('Укажите причину штрафа (например: промах, не засчитан, ошибка техники):');
-    if (!reason) return; // отмена
+  // ---- Модальное окно штрафа ----
+  window.openPenaltyModal = function(id) {
+    currentPenaltyTargetId = id;
+    $('pen-reason').value = 'Промах';
+    $('pen-custom-box').style.display = 'none';
+    $('pen-custom-text').value = '';
+    $('pen-seconds').value = '10';
+    $('penalty-modal').classList.add('on');
+    
+    $('pen-reason').onchange = function() {
+      $('pen-custom-box').style.display = (this.value === 'Другое') ? 'block' : 'none';
+    };
+  }
 
-    const secStr = prompt('Сколько секунд штрафа?', defaultSec);
-    const sec = parseInt(secStr);
-    if (!sec || sec <= 0) return;
+  window.closePenaltyModal = function() {
+    $('penalty-modal').classList.remove('on');
+    currentPenaltyTargetId = null;
+  }
+
+  window.submitPenalty = async function() {
+    if (!currentPenaltyTargetId) return;
+    const reasonSel = $('pen-reason').value;
+    const reason = reasonSel === 'Другое' ? $('pen-custom-text').value.trim() : reasonSel;
+    const sec = parseInt($('pen-seconds').value);
+
+    if (!reason) { toast('Укажите причину', 'err'); return; }
+    if (!sec || sec <= 0) { toast('Укажите секунды', 'err'); return; }
 
     try {
       const penaltyId = 'p_' + Date.now();
       const newPenalty = {
         sec: sec,
         reason: reason,
-        judgeName: currentJudgeName,
+        judgeName: currentJudgeName || 'Судья',
         timeStr: getTimeNow()
       };
-      await update(ref(db, `races/${id}/penalties/${penaltyId}`), newPenalty);
+      await update(ref(db, `races/${currentPenaltyTargetId}/penalties/${penaltyId}`), newPenalty);
       toast(`Штраф +${sec}с добавлен!`, 'ok');
+      closePenaltyModal();
+    } catch(e) { toast('Ошибка', 'err'); }
+  }
+
+  window.deletePenalty = async function(participantId, penaltyId) {
+    if(!confirm('Удалить этот штраф?')) return;
+    try {
+      await remove(ref(db, `races/${participantId}/penalties/${penaltyId}`));
+      toast('Штраф удален', 'ok');
     } catch(e) { toast('Ошибка', 'err'); }
   }
 
@@ -674,7 +1051,7 @@
   }
 
   /* ============================================================
-     5. УЧАСТНИК
+     6. УЧАСТНИК
      ============================================================ */
   window.openParticipantMode = function() {
     show('scr-participant-select');
@@ -705,6 +1082,7 @@
     currentParticipantId = id;
     state = null; 
     show('scr-race');
+    requestWakeLock();
     
     onValue(ref(db, 'races/' + id), (snap) => {
       const data = snap.val();
@@ -786,15 +1164,15 @@
     $('timer-status').textContent = '🏁 ФИНИШ';
     $('timer').classList.remove('paused');
     toast('🏁 ФИНИШ! Ваше время: ' + fmtShort(cleanMs), 'ok');
+    releaseWakeLock();
   }
 
   /* ============================================================
-     6. СУДЬЯ НА ЭТАПЕ (С РЕГИСТРАЦИЕЙ ИМЕНИ)
+     7. СУДЬЯ НА ЭТАПЕ
      ============================================================ */
   let judgeStage = null;
 
   window.promptJudgeLogin = function() {
-    // Если уже вводил имя - пускаем
     if (sessionStorage.getItem('judge_name')) {
       currentJudgeName = sessionStorage.getItem('judge_name');
       $('judge-name-display').textContent = currentJudgeName;
@@ -811,11 +1189,25 @@
     openJudgeMode();
   }
 
+  window.logoutJudge = function() {
+    sessionStorage.removeItem('judge_name');
+    toast('Вы вышли');
+    show('scr-role');
+    $('radio-fab').style.display = 'none';
+  }
+
   window.openJudgeMode = function() {
     show('scr-judge');
     initJudgeSelect();
     listenAllRaces();
     startJudgeTimer(); 
+    updateConnectionStatus(navigator.onLine);
+    requestWakeLock();
+    
+    // Показываем кнопку рации
+    $('radio-fab').style.display = 'flex';
+    // Подписываемся на уведомления рации
+    onValue(ref(db, 'radio_messages'), renderRadioChat);
   }
 
   function initJudgeSelect() {
@@ -884,12 +1276,12 @@
       else if (isOnMyStage) btnHtml = `<button class="btn-mini act" onclick="judgeComplete('${r.id}', ${judgeStage})">Засчитать: ${curSt.ico} ${curSt.short}</button>`;
       else btnHtml = `<button class="btn-mini ghost" disabled>ЖДЁМ</button>`;
 
-      // Судья может давать штраф ТОЛЬКО если участник на его этапе
       const penBtnHtml = isOnMyStage 
-        ? `<button class="btn-mini act-red" onclick="addPenalty('${r.id}', 10)">+10с Штраф</button>`
+        ? `<button class="btn-mini act-red" onclick="openPenaltyModal('${r.id}')">+10с Штраф</button>`
         : `<button class="btn-mini act-red" disabled>+10с Штраф</button>`;
 
       div.innerHTML = `
+        <div class="connection" id="conn-j-${r.id}"></div>
         <div class="judge-top">
           <div class="info">
             <div class="name">${r.fio}</div>
@@ -922,8 +1314,9 @@
       box.appendChild(div);
 
       renderStagesMap(document.getElementById(`j-map-${r.id}`), r.stageIdx);
-      renderPenalties(document.getElementById(`j-pen-${r.id}`), r.penalties);
+      renderPenalties(document.getElementById(`j-pen-${r.id}`), r.penalties, false);
     });
+    updateConnectionStatus(navigator.onLine);
   }
 
   window.judgeComplete = async function(participantId, stageIdx) {
@@ -937,35 +1330,97 @@
   }
 
   /* ============================================================
-     7. РЕЗУЛЬТАТЫ И ОЧИСТКА
+     8. РЕЗУЛЬТАТЫ И ОЧИСТКА
      ============================================================ */
+  function renderFilters(finishedList) {
+    const box = $('results-filter');
+    const teams = new Set(finishedList.map(r => r.team));
+    
+    box.innerHTML = `<button class="filter-btn ${currentFilter === 'all' ? 'on' : ''}" onclick="filterResults('all')">Все</button>`;
+    teams.forEach(t => {
+      box.innerHTML += `<button class="filter-btn ${currentFilter === t ? 'on' : ''}" onclick="filterResults('${t}')">${t}</button>`;
+    });
+  }
+
+  window.filterResults = function(team) {
+    currentFilter = team;
+    const snap = window.lastRacesSnap;
+    if (!snap) return;
+    const data = snap.val() || {};
+    const finished = Object.values(data).filter(r => r.status === 'finished');
+    renderResultsTable(finished);
+    renderFilters(finished);
+  }
+
+  function renderResultsTable(finished) {
+    const box = $('tables');
+    let filtered = finished;
+    if (currentFilter !== 'all') {
+      filtered = finished.filter(r => r.team === currentFilter);
+    }
+
+    if (!filtered.length) { box.innerHTML = '<p class="muted">Пока нет финишировавших.</p>'; return; }
+
+    filtered.sort((a,b) => a.totalMs - b.totalMs);
+    let html = `<table><thead><tr><th>#</th><th>Участник</th><th>Штраф</th><th>Время</th></tr></thead><tbody>`;
+    filtered.forEach((r, i) => {
+      const m = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+      let penSum = 0;
+      if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
+
+      html += `<tr>
+        <td>${m}</td>
+        <td class="nm">${r.fio}<br><small style="color:var(--dim);font-family:var(--sans)">${r.team}</small></td>
+        <td style="color:var(--red)">+${penSum}с</td>
+        <td><b>${fmtShort(r.totalMs)}</b></td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    box.innerHTML = html;
+  }
+
   window.showResults = function() {
     show('scr-results');
     const box = $('tables');
+    box.innerHTML = '<p class="muted">Загрузка...</p>';
     
     onValue(ref(db, 'races'), (snap) => {
+      window.lastRacesSnap = snap;
       const data = snap.val() || {};
       const finished = Object.values(data).filter(r => r.status === 'finished');
       
-      if (!finished.length) { box.innerHTML = '<p class="muted">Пока нет финишировавших.</p>'; return; }
-
-      finished.sort((a,b) => a.totalMs - b.totalMs);
-      let html = `<table><thead><tr><th>#</th><th>Участник</th><th>Штраф</th><th>Время</th></tr></thead><tbody>`;
-      finished.forEach((r, i) => {
-        const m = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
-        let penSum = 0;
-        if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
-
-        html += `<tr>
-          <td>${m}</td>
-          <td class="nm">${r.fio}<br><small style="color:var(--dim);font-family:var(--sans)">${r.team}</small></td>
-          <td style="color:var(--red)">+${penSum}с</td>
-          <td><b>${fmtShort(r.totalMs)}</b></td>
-        </tr>`;
-      });
-      html += `</tbody></table>`;
-      box.innerHTML = html;
+      renderFilters(finished);
+      renderResultsTable(finished);
     });
+  }
+
+  window.exportCSV = function() {
+    const snap = window.lastRacesSnap;
+    if (!snap) return;
+    const data = snap.val() || {};
+    const finished = Object.values(data).filter(r => r.status === 'finished');
+    
+    if (!finished.length) { toast('Нет данных для экспорта', 'err'); return; }
+
+    finished.sort((a,b) => a.totalMs - b.totalMs);
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += "Место;ФИО;Команда;Штраф (сек);Итоговое время\n";
+
+    finished.forEach((r, i) => {
+      let penSum = 0;
+      if (r.penalties) Object.values(r.penalties).forEach(p => penSum += p.sec);
+      const timeStr = fmtShort(r.totalMs);
+      csvContent += `${i+1};${r.fio};${r.team};${penSum};${timeStr}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "scorpion_results.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast('Файл скачан', 'ok');
   }
 
   window.clearResults = async function() {
@@ -983,7 +1438,7 @@
   }
 
   /* ============================================================
-     8. СТАРТ ПРИЛОЖЕНИЯ
+     9. СТАРТ ПРИЛОЖЕНИЯ
      ============================================================ */
   setTimeout(() => {
     $('scr-splash').classList.add('hide');
