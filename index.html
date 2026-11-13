@@ -187,6 +187,41 @@
   .radio-title { font-weight: 900; color: var(--red); letter-spacing: 1px; text-transform: uppercase; font-size: 12px; }
   .radio-close { background: none; border: none; color: var(--txt); font-size: 20px; cursor: pointer; }
   
+  /* Индикатор "печатает..." */
+  .typing-indicator {
+    padding: 6px 16px;
+    font-size: 11px;
+    color: var(--dim);
+    background: #0c0505;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+  }
+  .typing-indicator .pencil {
+    display: inline-block;
+    animation: pencilWrite 1s ease-in-out infinite;
+    font-size: 13px;
+  }
+  @keyframes pencilWrite {
+    0%, 100% { transform: rotate(-10deg) translateY(0); }
+    50% { transform: rotate(15deg) translateY(-2px); }
+  }
+  .typing-indicator .dots span {
+    display: inline-block;
+    animation: dotBlink 1.4s infinite;
+  }
+  .typing-indicator .dots span:nth-child(2) { animation-delay: .2s; }
+  .typing-indicator .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes dotBlink {
+    0%, 60%, 100% { opacity: .2; }
+    30% { opacity: 1; }
+  }
+  .typing-indicator .name-mj { color: var(--red); font-weight: 900; }
+  .typing-indicator .name-judge { color: var(--gold); font-weight: 800; }
+  .typing-indicator .name-participant { color: var(--blue); font-weight: 700; }
+
   .radio-chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-height: 200px; }
   .msg { 
     padding: 10px 12px; border-radius: 10px; font-size: 13px; max-width: 85%; 
@@ -455,13 +490,14 @@
       <div class="radio-title">💬 Чат судей</div>
       <button class="radio-close" onclick="toggleRadio()">✕</button>
     </div>
+    <div class="typing-indicator" id="typing-judge" style="display:none;"></div>
     <div class="radio-chat" id="radio-chat">
       <div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>
     </div>
 
     <div class="radio-controls">
       <div class="text-input-row">
-        <input id="radio-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg('judge')" />
+        <input id="radio-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg('judge')" oninput="onChatInput('judge')" />
         <button class="btn primary" onclick="sendTextMsg('judge')">➤</button>
       </div>
     </div>
@@ -475,13 +511,14 @@
       <div class="radio-title">📢 Общий чат</div>
       <button class="radio-close" onclick="toggleGeneralChat()">✕</button>
     </div>
+    <div class="typing-indicator" id="typing-general" style="display:none;"></div>
     <div class="radio-chat" id="general-chat">
       <div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>
     </div>
 
     <div class="radio-controls">
       <div class="text-input-row">
-        <input id="general-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg('general')" />
+        <input id="general-text-input" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendTextMsg('general')" oninput="onChatInput('general')" />
         <button class="btn primary" onclick="sendTextMsg('general')">➤</button>
       </div>
     </div>
@@ -550,7 +587,7 @@
     <header>
       <button class="back-btn" onclick="show('scr-role')">← Назад</button>
       <div class="brand"><span class="sc">🦂</span><div>УЧАСТНИК<small>СПИСОК</small></div></div>
-      <div style="width:80px"></div>
+      <button class="back-btn" onclick="logoutParticipant()" title="Выход" style="padding:9px 10px;font-size:12px;color:var(--red);border-color:var(--red-d);">Выход</button>
     </header>
     <div class="card">
       <h2>Список участников</h2>
@@ -761,6 +798,16 @@
   let isRadioOpen = false;
   let isGeneralOpen = false;
 
+  // Typing
+  let deviceId = localStorage.getItem('device_id');
+  if (!deviceId) {
+    deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('device_id', deviceId);
+  }
+  let typingTimers = { judge: null, general: null };
+  let typingThrottle = { judge: 0, general: 0 };
+  let typingUnsub = { judge: null, general: null };
+
   /* ============================================================
      3. УТИЛИТЫ
      ============================================================ */
@@ -791,7 +838,6 @@
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
 
-  // Экранирование HTML (защита от XSS)
   function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str)
@@ -825,7 +871,6 @@
     if (document.visibilityState === 'visible' && state && !state.finished) requestWakeLock();
   });
 
-  // Отрисовка карты этапов с ЛАЙВОВЫМ таймером и ШТРАФАМИ
   function renderStagesMap(container, currentStageIdx, laps = {}, stageStartTime = null, penalties = {}) {
     if (!container) return;
     
@@ -968,10 +1013,92 @@
   }
 
   /* ============================================================
-     5. ЧАТЫ (СУДЕЙСКИЙ И ОБЩИЙ)
+     5. TYPING INDICATOR
+     ============================================================ */
+  
+  function getTypingRole() {
+    if (localStorage.getItem('mj_auth') === 'true') return { role: 'mj', name: localStorage.getItem('mj_name') || 'Главный судья' };
+    if (localStorage.getItem('judge_name')) return { role: 'judge', name: localStorage.getItem('judge_name') };
+    const nick = getParticipantNickname();
+    return { role: 'participant', name: nick || 'Участник' };
+  }
+
+  window.onChatInput = function(chat) {
+    const now = Date.now();
+    // Троттлинг: не чаще 1.5с
+    if (now - typingThrottle[chat] > 1500) {
+      typingThrottle[chat] = now;
+      const info = getTypingRole();
+      const dbPath = chat === 'judge' ? 'radio_typing' : 'general_typing';
+      update(ref(db, dbPath + '/' + deviceId), {
+        name: info.name,
+        role: info.role,
+        at: now
+      }).catch(() => {});
+    }
+    
+    // Сброс через 3 секунды после последнего ввода
+    clearTimeout(typingTimers[chat]);
+    typingTimers[chat] = setTimeout(() => {
+      stopTyping(chat);
+    }, 3000);
+  }
+
+  function stopTyping(chat) {
+    const dbPath = chat === 'judge' ? 'radio_typing' : 'general_typing';
+    remove(ref(db, dbPath + '/' + deviceId)).catch(() => {});
+    clearTimeout(typingTimers[chat]);
+    typingTimers[chat] = null;
+  }
+
+  function listenTyping(chat) {
+    const dbPath = chat === 'judge' ? 'radio_typing' : 'general_typing';
+    if (typingUnsub[chat]) return;
+    typingUnsub[chat] = onValue(ref(db, dbPath), (snap) => {
+      renderTypingIndicator(chat, snap.val() || {});
+    });
+  }
+
+  function renderTypingIndicator(chat, data) {
+    const el = $(chat === 'judge' ? 'typing-judge' : 'typing-general');
+    if (!el) return;
+    
+    const now = Date.now();
+    const active = Object.entries(data)
+      .filter(([id, t]) => id !== deviceId && (now - t.at) < 5000)
+      .map(([id, t]) => t);
+    
+    if (active.length === 0) {
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    
+    el.style.display = 'flex';
+    
+    let text = '';
+    if (active.length === 1) {
+      const t = active[0];
+      text = `<span class="name-${t.role}">${escapeHtml(t.name)}</span> печатает<span class="dots"><span>.</span><span>.</span><span>.</span></span>`;
+    } else if (active.length === 2) {
+      const a = active[0], b = active[1];
+      text = `<span class="name-${a.role}">${escapeHtml(a.name)}</span>, <span class="name-${b.role}">${escapeHtml(b.name)}</span> печатают<span class="dots"><span>.</span><span>.</span><span>.</span></span>`;
+    } else {
+      text = `Несколько человек печатают<span class="dots"><span>.</span><span>.</span><span>.</span></span>`;
+    }
+    
+    el.innerHTML = `<span class="pencil">✏️</span> <span>${text}</span>`;
+  }
+
+  function clearMyTyping() {
+    stopTyping('judge');
+    stopTyping('general');
+  }
+
+  /* ============================================================
+     6. ЧАТЫ
      ============================================================ */
 
-  // --- Логика чата судей ---
   window.toggleRadio = function() {
     isRadioOpen = !isRadioOpen;
     $('radio-modal').classList.toggle('on', isRadioOpen);
@@ -981,6 +1108,9 @@
       scrollChatToBottom('radio-chat');
       lastMsgTimeJudge = Date.now();
       onValue(ref(db, 'radio_messages'), renderJudgeChat);
+      listenTyping('judge');
+    } else {
+      stopTyping('judge');
     }
   }
 
@@ -1003,14 +1133,13 @@
     if (!messages.length) {
       chat.innerHTML = '<div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>';
     } else {
-      const isModerator = sessionStorage.getItem('mj_auth') === 'true' || sessionStorage.getItem('judge_name') !== null;
+      const isModerator = localStorage.getItem('mj_auth') === 'true' || localStorage.getItem('judge_name') !== null;
       
       messages.forEach(([id, m]) => {
         const delHtml = isModerator 
           ? `<button class="del-msg-btn" onclick="deleteChatMessage('radio_messages', '${id}')">✕</button>` 
           : '';
         
-        // Fallback для старых сообщений
         let authorCls = m.authorCls || '';
         if (!authorCls && m.author) {
           if (m.author.includes('🎖️') || m.author.includes('Главный судья')) authorCls = 'role-mj';
@@ -1037,14 +1166,11 @@
     }
   }
 
-  /* ============================================================
-     Позывной участника для общего чата
-     ============================================================ */
   function getParticipantNickname() {
-    return sessionStorage.getItem('participant_nick') || '';
+    return localStorage.getItem('participant_nick') || '';
   }
   function setParticipantNickname(nick) {
-    sessionStorage.setItem('participant_nick', nick);
+    localStorage.setItem('participant_nick', nick);
   }
 
   window.openNicknameModal = function() {
@@ -1064,12 +1190,12 @@
   }
 
   function getAuthorLabel() {
-    if (sessionStorage.getItem('mj_auth') === 'true') {
-      const name = sessionStorage.getItem('mj_name') || 'Главный судья';
+    if (localStorage.getItem('mj_auth') === 'true') {
+      const name = localStorage.getItem('mj_name') || 'Главный судья';
       return { text: `🎖️ Главный судья (${name})`, cls: 'role-mj' };
     }
-    if (sessionStorage.getItem('judge_name')) {
-      const name = sessionStorage.getItem('judge_name');
+    if (localStorage.getItem('judge_name')) {
+      const name = localStorage.getItem('judge_name');
       return { text: `🏅 Судья (${name})`, cls: 'role-judge' };
     }
     const nick = getParticipantNickname();
@@ -1077,8 +1203,8 @@
   }
 
   window.toggleGeneralChat = function() {
-    const isJudge = sessionStorage.getItem('mj_auth') === 'true' 
-                    || sessionStorage.getItem('judge_name') !== null;
+    const isJudge = localStorage.getItem('mj_auth') === 'true' 
+                    || localStorage.getItem('judge_name') !== null;
     
     if (!isJudge && !getParticipantNickname()) {
       openNicknameModal();
@@ -1095,6 +1221,9 @@
       scrollChatToBottom('general-chat');
       lastMsgTimeGeneral = Date.now();
       onValue(ref(db, 'general_messages'), renderGeneralChat);
+      listenTyping('general');
+    } else {
+      stopTyping('general');
     }
   }
 
@@ -1117,14 +1246,13 @@
     if (!messages.length) {
       chat.innerHTML = '<div class="muted" style="text-align:center;font-size:11px;margin-top:20px;">Нет сообщений. Начните общение!</div>';
     } else {
-      const isModerator = sessionStorage.getItem('mj_auth') === 'true' || sessionStorage.getItem('judge_name') !== null;
+      const isModerator = localStorage.getItem('mj_auth') === 'true' || localStorage.getItem('judge_name') !== null;
       
       messages.forEach(([id, m]) => {
         const delHtml = isModerator 
           ? `<button class="del-msg-btn" onclick="deleteChatMessage('general_messages', '${id}')">✕</button>` 
           : '';
         
-        // Fallback для старых сообщений
         let authorCls = m.authorCls || '';
         if (!authorCls && m.author) {
           if (m.author.includes('🎖️') || m.author.includes('Главный судья')) authorCls = 'role-mj';
@@ -1165,6 +1293,8 @@
     const text = $(inputId).value.trim();
     if (!text) return;
     $(inputId).value = '';
+    
+    stopTyping(type);
 
     const dbPath = type === 'judge' ? 'radio_messages' : 'general_messages';
     const author = getAuthorLabel();
@@ -1181,11 +1311,11 @@
   }
 
   /* ============================================================
-     6. ГЛАВНЫЙ СУДЬЯ
+     7. ГЛАВНЫЙ СУДЬЯ
      ============================================================ */
   window.promptMainJudge = function() {
-    if (sessionStorage.getItem('mj_auth') === 'true') {
-      currentJudgeName = sessionStorage.getItem('mj_name') || 'Главный судья';
+    if (localStorage.getItem('mj_auth') === 'true') {
+      currentJudgeName = localStorage.getItem('mj_name') || 'Главный судья';
       $('mj-name-display').textContent = currentJudgeName;
       openMainJudge();
       return;
@@ -1195,8 +1325,8 @@
     if (pwd === 'scorp2015') {
       const name = prompt('Введите ваше имя/позывной (для чата):');
       if (!name) return;
-      sessionStorage.setItem('mj_auth', 'true');
-      sessionStorage.setItem('mj_name', name);
+      localStorage.setItem('mj_auth', 'true');
+      localStorage.setItem('mj_name', name);
       currentJudgeName = name;
       $('mj-name-display').textContent = currentJudgeName;
       openMainJudge();
@@ -1206,8 +1336,9 @@
   }
 
   window.logoutMainJudge = function() {
-    sessionStorage.removeItem('mj_auth');
-    sessionStorage.removeItem('mj_name');
+    clearMyTyping();
+    localStorage.removeItem('mj_auth');
+    localStorage.removeItem('mj_name');
     toast('Вы вышли');
     show('scr-role');
     $('radio-fab').style.display = 'none';
@@ -1487,11 +1618,20 @@
   }
 
   /* ============================================================
-     7. УЧАСТНИК
+     8. УЧАСТНИК
      ============================================================ */
   window.openParticipantMode = function() {
     show('scr-participant-select');
     listenParticipantList();
+  }
+
+  window.logoutParticipant = function() {
+    clearMyTyping();
+    localStorage.removeItem('participant_nick');
+    toast('Позывной удалён');
+    show('scr-role');
+    isGeneralOpen = false;
+    $('general-modal').classList.remove('on');
   }
 
   function listenParticipantList() {
@@ -1560,14 +1700,14 @@
   }
 
   /* ============================================================
-     8. СУДЬЯ НА ЭТАПЕ
+     9. СУДЬЯ НА ЭТАПЕ
      ============================================================ */
   let judgeStage = null;
 
   window.promptJudgeLogin = async function() {
-    if (sessionStorage.getItem('judge_name') && sessionStorage.getItem('judge_stage')) {
-      currentJudgeName = sessionStorage.getItem('judge_name');
-      judgeStage = parseInt(sessionStorage.getItem('judge_stage'));
+    if (localStorage.getItem('judge_name') && localStorage.getItem('judge_stage')) {
+      currentJudgeName = localStorage.getItem('judge_name');
+      judgeStage = parseInt(localStorage.getItem('judge_stage'));
       $('judge-name-display').textContent = currentJudgeName;
       openJudgeMode();
       return;
@@ -1582,7 +1722,7 @@
       
       const pwd = prompt('Введите пароль судьи:');
       if (pwd === correctPwd) {
-        sessionStorage.setItem('judge_name', name);
+        localStorage.setItem('judge_name', name);
         currentJudgeName = name;
         $('judge-name-display').textContent = currentJudgeName;
         openJudgeMode(true);
@@ -1593,8 +1733,9 @@
   }
 
   window.logoutJudge = function() {
-    sessionStorage.removeItem('judge_name');
-    sessionStorage.removeItem('judge_stage');
+    clearMyTyping();
+    localStorage.removeItem('judge_name');
+    localStorage.removeItem('judge_stage');
     toast('Вы вышли. Этап сброшен.');
     show('scr-role');
     $('radio-fab').style.display = 'none';
@@ -1608,7 +1749,7 @@
     show('scr-judge');
     initJudgeSelect();
     
-    const savedStage = sessionStorage.getItem('judge_stage');
+    const savedStage = localStorage.getItem('judge_stage');
     if (savedStage !== null && !forceSelect) {
       judgeStage = parseInt(savedStage);
       $('judge-stage-select').value = judgeStage;
@@ -1639,7 +1780,7 @@
     if (val === '') return;
     
     judgeStage = parseInt(val);
-    sessionStorage.setItem('judge_stage', judgeStage);
+    localStorage.setItem('judge_stage', judgeStage);
     $('judge-stage-select').disabled = true;
     toast(`Этап закреплен! Смена только через выход.`, 'ok');
     if(navigator.vibrate) navigator.vibrate(50);
@@ -1763,7 +1904,7 @@
   }
 
   /* ============================================================
-     9. РЕЗУЛЬТАТЫ И ОЧИСТКА
+     10. РЕЗУЛЬТАТЫ И ОЧИСТКА
      ============================================================ */
   function renderFilters(finishedList) {
     const box = $('results-filter');
@@ -1935,7 +2076,7 @@
   }
 
   /* ============================================================
-     10. СТАРТ ПРИЛОЖЕНИЯ И PWA
+     11. СТАРТ ПРИЛОЖЕНИЯ И PWA
      ============================================================ */
   
   const manifest = {
@@ -1953,9 +2094,34 @@
   const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
   document.getElementById('manifest-link').href = URL.createObjectURL(blob);
 
+  /* ============================================================
+     АВТОВОССТАНОВЛЕНИЕ СЕССИИ
+     ============================================================ */
+  function restoreSession() {
+    // Главный судья
+    if (localStorage.getItem('mj_auth') === 'true') {
+      currentJudgeName = localStorage.getItem('mj_name') || 'Главный судья';
+      $('mj-name-display').textContent = currentJudgeName;
+      openMainJudge();
+      return true;
+    }
+    // Обычный судья
+    if (localStorage.getItem('judge_name') && localStorage.getItem('judge_stage')) {
+      currentJudgeName = localStorage.getItem('judge_name');
+      judgeStage = parseInt(localStorage.getItem('judge_stage'));
+      $('judge-name-display').textContent = currentJudgeName;
+      openJudgeMode();
+      return true;
+    }
+    return false;
+  }
+
   setTimeout(() => {
     $('scr-splash').classList.add('hide');
-    show('scr-role');
+    const restored = restoreSession();
+    if (!restored) {
+      show('scr-role');
+    }
   }, 5000);
 
 </script>
