@@ -61,10 +61,13 @@
 
   /* ============ SPLASH ============ */
   #scr-splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 50% 42%,#1f0707 0%,#0a0505 55%,#000 100%);overflow:hidden}
+    background:radial-gradient(circle at 50% 42%,#1f0707 0%,#0a0505 55%,#000 100%);overflow:hidden;
+    transition:opacity .5s ease, visibility .5s ease;}
+  #scr-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
   .splash-inner{position:relative;width:100%;max-width:440px;padding:20px;text-align:center}
+  
+  /* Оставлены только 2 скорпиона: b и c, маленький слева (a) — убран */
   .crawl-scorpion{position:absolute;font-size:30px;filter:drop-shadow(0 0 12px var(--red-glow));opacity:.9;animation:scorpWalk 7s ease-in-out infinite}
-  .crawl-scorpion.a{top:8%;left:-10%;animation-delay:.2s}
   .crawl-scorpion.b{bottom:12%;right:-10%;animation-delay:1.4s;font-size:26px;animation-duration:8.5s}
   .crawl-scorpion.c{top:42%;right:-14%;animation-delay:3s;font-size:20px;animation-duration:10s;opacity:.6}
   @keyframes scorpWalk{
@@ -74,6 +77,7 @@
     75%{transform:translate(40px,20px) rotate(8deg)}
     100%{transform:translate(0,0) rotate(-8deg)}
   }
+  
   .splash-logo{font-size:88px;line-height:1;filter:drop-shadow(0 0 28px var(--red-glow));animation:logoPulse 2.2s ease-in-out infinite}
   @keyframes logoPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
   .splash-title{
@@ -161,7 +165,6 @@
   .pen{font-family:var(--mono);font-size:13px;color:var(--red);margin-top:6px;min-height:16px;font-weight:700;animation:penPulse 1.2s ease-in-out infinite}
   @keyframes penPulse{0%,100%{opacity:.85}50%{opacity:1;text-shadow:0 0 12px var(--red-glow)}}
 
-  /* pause overlay inside timer card */
   .pause-overlay{
     display:none;position:absolute;inset:0;background:rgba(10,5,5,.82);backdrop-filter:blur(3px);
     border-radius:18px;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:5;
@@ -268,9 +271,9 @@
 <body>
 
 <!-- ================= SPLASH ================= -->
+<!-- Убран .crawl-scorpion.a (маленький слева) -->
 <section id="scr-splash" class="screen on">
   <div class="splash-inner">
-    <div class="crawl-scorpion a">🦂</div>
     <div class="crawl-scorpion b">🦂</div>
     <div class="crawl-scorpion c">🦂</div>
     <div class="splash-logo">🦂</div>
@@ -287,7 +290,7 @@
       <div class="chat">ЧАТ · СТРАЙКБОЛ СОЧИ ПУЛЬС</div>
     </div>
     <div class="splash-load"><i></i></div>
-    <div class="splash-hint">ЗАГРУЗКА ТРАССЫ…</div>
+    <div class="splash-hint" style="pointer-events:none">ЗАГРУЗКА ТРАССЫ…</div>
   </div>
 </section>
 
@@ -338,7 +341,6 @@
         <div class="pen" id="pen"></div>
       </div>
 
-      <!-- pause overlay -->
       <div class="pause-overlay" id="pause-overlay">
         <div class="icon">⏸</div>
         <div class="txt">ПАУЗА</div>
@@ -461,11 +463,6 @@ function vibrate(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){}
 
 /* ============================================================
    ELAPSED-TIME MODEL (pause-aware)
-   We track:
-     state.startAt       — absolute start
-     state.pausedTotal   — total ms spent in pause
-     state.pauseStartedAt— when current pause began (null if running)
-   Elapsed clean time = now - startAt - pausedTotal - (isPaused ? now-pauseStartedAt : 0)
    ============================================================ */
 function elapsedMs(){
   if(!state) return 0;
@@ -501,7 +498,6 @@ function startRun(){
   renderStage();
   startTimer();
   requestWakeLock();
-  // splash skip guard removed after first entry
 }
 
 function labelCat(c){ return c==='junior'?'Юниор':c==='veteran'?'Ветеран':'Взрослый'; }
@@ -542,7 +538,7 @@ function pauseRun(){
   $('btn-pause').innerHTML = '▶ ПРОДОЛЖИТЬ';
   $('btn-pause').classList.add('go');
   $('btn-pause').classList.remove('pause-btn');
-  $('btn-next').disabled = true;           // нельзя завершить этап на паузе
+  $('btn-next').disabled = true;
   vibrate([20,60,20]);
   toast('⏸ Пауза — таймер остановлен');
 }
@@ -684,7 +680,6 @@ function buildPistol(st){
       if(isPaused()) return;
       p.hitsArr[i] = !p.hitsArr[i];
       t.classList.toggle('hit', p.hitsArr[i]);
-      // muzzle flash
       wrap.classList.remove('fire'); void wrap.offsetWidth; wrap.classList.add('fire');
       vibrate(12);
       recalcPistol(st);
@@ -729,7 +724,6 @@ function completeStage(){
     if(pen>0) toast(`Не отмечено корректно: штраф +${pen} с`, true);
   }
 
-  // clean split accounting (pause-aware already via elapsedMs)
   const prevEnd = state.lastEndAt || state.startAt;
   const nowClean = state.startAt + elapsedMs();
   state.splits.push({ stage: st.id, ms: nowClean - prevEnd, at: now });
@@ -864,7 +858,7 @@ document.addEventListener('visibilitychange', ()=>{
 
   if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     const swCode = `
-      const CACHE='scorpion-tb-v2';
+      const CACHE='scorpion-tb-v3';
       const SHELL=[location.href];
       self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL).catch(()=>{}))); });
       self.addEventListener('activate',e=>{ e.waitUntil(self.clients.claim()); });
@@ -879,8 +873,11 @@ document.addEventListener('visibilitychange', ()=>{
     navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
   }
 
-  // splash → start
-  setTimeout(()=>{ if($('scr-splash').classList.contains('on')) show('scr-start'); }, 2600);
+  // Быстрый тап — сразу пропустить заставку
+  $('scr-splash').addEventListener('click', skipSplash);
+
+  // Автоматический переход через 5 секунд (надёжно)
+  setTimeout(skipSplash, 5000);
 
   // quick-team chips
   document.querySelectorAll('.quick-teams button').forEach(b=>{
@@ -891,6 +888,20 @@ document.addEventListener('visibilitychange', ()=>{
     });
   });
 })();
+
+// Функция перехода с заставки
+let splashSkipped = false;
+function skipSplash(){
+  if(splashSkipped) return;
+  splashSkipped = true;
+  const splash = $('scr-splash');
+  splash.classList.add('hide');
+  // даём анимации исчезновения пройти
+  setTimeout(() => {
+    splash.style.display = 'none';
+    show('scr-start');
+  }, 500);
+}
 
 document.addEventListener('gesturestart', e=>e.preventDefault());
 </script>
