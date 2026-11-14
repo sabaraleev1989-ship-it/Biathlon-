@@ -37,9 +37,8 @@
   .app{
     max-width:520px;margin:0 auto;
     padding:10px 14px;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
-    height: 100vh;
-    height: 100dvh;
+    padding-bottom: calc(30px + env(safe-area-inset-bottom));
+    height: 100%;
     position:relative;z-index:2; 
     display:flex; flex-direction:column;
   }
@@ -49,7 +48,7 @@
     flex: 1; 
     overflow-y: auto; 
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 40px; /* Отступ снизу, чтобы контент не лип к краю */
+    padding-bottom: 80px; 
     animation: fade .3s ease;
   }
   .screen.on{display:flex; flex-direction:column;}
@@ -142,36 +141,36 @@
   .connection { position: absolute; top: 10px; left: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green-glow); z-index: 10; }
   .connection.offline { background: var(--red); box-shadow: 0 0 6px var(--red-glow); animation: blink 1s infinite; }
 
-  /* ============ КОМПАКТНЫЙ СПИСОК ПРЕДЗАПИСЕЙ ============ */
+  /* ============ КОМПАКТНЫЙ СПИСОК ПРЕДЗАПИСЕЙ (В МОДАЛКЕ) ============ */
   .prereg-row {
-    display: flex; align-items: center; gap: 10px;
-    background: #0c0505; border: 1px solid var(--line); border-radius: 12px;
-    padding: 10px 12px; margin-bottom: 8px; transition: .2s;
+    display: flex; align-items: center; gap: 8px;
+    background: #0c0505; border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 10px; margin-bottom: 6px; transition: .2s;
   }
   .prereg-row:last-child { margin-bottom: 0; }
   
   .prereg-num {
-    flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px;
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px;
     background: linear-gradient(180deg, #2a0e0e, #1a0707); border: 1px solid var(--line2);
     display: flex; align-items: center; justify-content: center;
-    font-family: var(--mono); font-size: 14px; font-weight: 900;
+    font-family: var(--mono); font-size: 12px; font-weight: 900;
     color: var(--red); text-shadow: 0 0 6px var(--red-glow);
   }
   
   .prereg-info { flex: 1; min-width: 0; }
   .prereg-info .name {
-    font-weight: 800; font-size: 13.5px; line-height: 1.2;
+    font-weight: 800; font-size: 13px; line-height: 1.1;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .prereg-info .team {
-    font-size: 10.5px; color: var(--dim); margin-top: 2px;
+    font-size: 10px; color: var(--dim); margin-top: 1px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   
   .prereg-start-btn {
-    flex-shrink: 0; padding: 8px 14px; border-radius: 10px;
+    flex-shrink: 0; padding: 6px 10px; border-radius: 8px;
     border: 1px solid transparent; background: linear-gradient(180deg, #4ade80, #22c55e);
-    color: #000; font-weight: 900; font-size: 12px; letter-spacing: .5px;
+    color: #000; font-weight: 900; font-size: 11px; letter-spacing: .3px;
     cursor: pointer; transition: .15s; white-space: nowrap;
   }
   .prereg-start-btn:active { transform: scale(.95); }
@@ -199,8 +198,8 @@
   /* Бейдж штрафа на этапе */
   .stage-pen { font-size: 10px; color: var(--red); font-weight: bold; background: rgba(255,45,45,0.15); padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
 
-  .judge-actions{display:flex;gap:6px;flex-wrap:wrap}
-  .btn-mini{padding:14px 12px;border-radius:10px;font-weight:900;font-size:14px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px; min-height: 48px; text-align: center;}
+  .judge-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .btn-mini{padding:12px 10px;border-radius:10px;font-weight:900;font-size:13px;border:none;cursor:pointer;transition:.15s;flex:1;display:flex;align-items:center;justify-content:center;gap:4px; min-height: 44px; text-align: center;}
   .btn-mini:active{transform:scale(.95)}
   .btn-mini.act{background:var(--blue);color:#fff}
   .btn-mini.act-green{background:var(--green);color:#000}
@@ -280,6 +279,10 @@
   .modal-box{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(0,0,0,.8);}
   .modal-title{font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;color:var(--red);}
   .modal-actions{display:flex;gap:10px;margin-top:16px;}
+
+  /* Модалка предзаписей */
+  #prereg-modal .modal-box { max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; }
+  #prereg-list-modal { overflow-y: auto; flex: 1; padding-right: 4px; }
 
   /* ============================================================
      ЗАСТАВКА (123.png)
@@ -390,6 +393,17 @@
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeSettingsModal()">Отмена</button>
       <button class="btn primary" onclick="saveSettings()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ПРЕДЗАПИСЕЙ -->
+<div class="modal-overlay" id="prereg-modal">
+  <div class="modal-box">
+    <div class="modal-title">Предзаписи</div>
+    <div id="prereg-list-modal"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closePreregModal()">Закрыть</button>
     </div>
   </div>
 </div>
@@ -563,8 +577,7 @@
     </div>
 
     <div class="card" style="margin-top:12px">
-      <h3 style="font-size:12px;color:var(--red);text-transform:uppercase;margin-bottom:10px">Предзаписи</h3>
-      <div id="pre-reg-list"><p class="muted">Загрузка...</p></div>
+      <button class="btn blue" onclick="openPreregModal()">📋 ПРЕДЗАПИСИ (<span id="prereg-count">0</span>)</button>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -718,7 +731,7 @@
   let typingThrottle = { judge: 0, general: 0 };
   let typingUnsub = { judge: null, general: null };
 
-  // Переменная для умного возврата
+  // Умный возврат назад
   let returnScreen = 'scr-role';
 
   /* ============================================================
@@ -726,13 +739,11 @@
      ============================================================ */
   window.$ = id => document.getElementById(id);
   
-  // Умный возврат назад
   window.goBackSmart = function() {
     show(returnScreen);
   }
 
   window.show = function(id){ 
-    // Запоминаем экран, с которого уходим (для кнопки назад)
     const current = document.querySelector('.screen.on');
     if (current && current.id !== 'scr-race' && current.id !== 'scr-results' && current.id !== 'scr-splash') {
       returnScreen = current.id;
@@ -804,7 +815,6 @@
     btn.style.display = (isMJ || isJudge) ? 'flex' : 'none';
   }
 
-  // Автоприсвоение порядкового номера
   async function getNextRegNum() {
     const snap = await new Promise(res => onValue(ref(db, 'settings/last_reg_num'), res, { onlyOnce: true }));
     let last = snap.val() || 0;
@@ -1293,30 +1303,50 @@
     requestWakeLock();
   }
 
+  let latestPreRegs = {};
+
   function listenPreRegistrations() {
     onValue(ref(db, 'pre_registrations'), (snap) => {
-      const data = snap.val() || {};
-      const list = Object.entries(data).sort((a,b) => (a[1].regNum || 9999) - (b[1].regNum || 9999));
-      const box = $('pre-reg-list');
+      latestPreRegs = snap.val() || {};
+      const list = Object.entries(latestPreRegs).sort((a,b) => (a[1].regNum || 9999) - (b[1].regNum || 9999));
       
-      if (!list.length) { box.innerHTML = '<p class="muted">Пока нет заявок.</p>'; return; }
+      $('prereg-count').textContent = list.length;
       
-      box.innerHTML = `<p class="muted" style="margin-bottom:8px">Всего заявок: <b>${list.length}</b></p>`;
-      
-      list.forEach(([id, r]) => {
-        const div = document.createElement('div');
-        div.className = 'prereg-row';
-        div.innerHTML = `
+      // Обновляем содержимое модалки, если она открыта
+      if ($('prereg-modal').classList.contains('on')) {
+        renderPreregListInModal(list);
+      }
+    });
+  }
+
+  window.openPreregModal = function() {
+    $('prereg-modal').classList.add('on');
+    const list = Object.entries(latestPreRegs).sort((a,b) => (a[1].regNum || 9999) - (b[1].regNum || 9999));
+    renderPreregListInModal(list);
+  }
+
+  window.closePreregModal = function() {
+    $('prereg-modal').classList.remove('on');
+  }
+
+  function renderPreregListInModal(list) {
+    const box = $('prereg-list-modal');
+    if (!list.length) { box.innerHTML = '<p class="muted" style="text-align:center;padding:10px;">Пока нет заявок.</p>'; return; }
+    
+    let html = '';
+    list.forEach(([id, r]) => {
+      html += `
+        <div class="prereg-row">
           <div class="prereg-num">${r.regNum || '—'}</div>
           <div class="prereg-info">
             <div class="name">${escapeHtml(r.fio)}</div>
             <div class="team">${escapeHtml(r.team)}</div>
           </div>
           <button class="prereg-start-btn" onclick="startFromPreReg('${id}')">НА СТАРТ</button>
-        `;
-        box.appendChild(div);
-      });
+        </div>
+      `;
     });
+    box.innerHTML = html;
   }
 
   window.startFromPreReg = async function(id) {
@@ -1342,6 +1372,7 @@
       });
       
       toast(`№${data.regNum || ''} ${data.fio} — на старт!`, 'ok');
+      closePreregModal();
     } catch(e) { toast('Ошибка', 'err'); }
   }
 
@@ -1452,15 +1483,15 @@
         <h4 style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;">Штрафы:</h4>
         <div class="penalty-list" id="mj-pen-${r.id}"></div>
 
-        <div class="judge-actions" style="margin-top:10px;">
+        <div class="judge-actions">
           ${actBtn}
         </div>
-        <div class="judge-actions" style="margin-top:6px;">
+        <div class="judge-actions">
           <button class="btn-mini act-red" onclick="openPenaltyModal('${r.id}')">+10с Штраф</button>
           <button class="btn-mini act-yellow" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
           <button class="btn-mini ghost" onclick="finishParticipant('${r.id}')">🏁 ФИНИШ</button>
         </div>
-        <div class="judge-actions" style="margin-top:6px;">
+        <div class="judge-actions">
           <button class="btn-mini ghost" onclick="cancelStart('${r.id}')" style="border-color:#c41a1a;color:#ff6b6b;">↩️ СБРОСИТЬ СТАРТ</button>
         </div>
       `;
@@ -1837,10 +1868,10 @@
         <h4 style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;">История штрафов:</h4>
         <div class="penalty-list" id="j-pen-${r.id}"></div>
 
-        <div class="judge-actions" style="margin-top:10px;">
+        <div class="judge-actions">
           ${btnHtml}
         </div>
-        <div class="judge-actions" style="margin-top:6px;">
+        <div class="judge-actions">
           ${penBtnHtml}
           <button class="btn-mini act-yellow" onclick="togglePause('${r.id}', ${isPaused})">${isPaused?'▶ ПРОДОЛЖИТЬ':'⏸ ПАУЗА'}</button>
         </div>
@@ -2040,7 +2071,7 @@
       toast('Все данные очищены', 'ok');
       if ($('scr-main-judge').classList.contains('on')) {
         $('main-judge-list').innerHTML = '<p class="muted">Нет активных забегов.</p>';
-        $('pre-reg-list').innerHTML = '<p class="muted">Пока нет заявок.</p>';
+        $('prereg-count').textContent = '0';
       }
       if ($('scr-results').classList.contains('on')) {
         $('tables').innerHTML = '<p class="muted">Нет данных.</p>';
