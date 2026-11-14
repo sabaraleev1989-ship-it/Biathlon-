@@ -20,14 +20,28 @@
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;overflow:hidden;}
+  
+  /* ============ ГЛОБАЛЬНЫЕ СТИЛИ (ИСПРАВЛЕНИЕ СКРОЛЛА) ============ */
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    width: 100%;
+  }
   body{
     background-color: var(--bg);
     background-image: url('12.png');
     background-size: cover;
     background-position: center top;
     background-attachment: fixed;
-    color:var(--txt);font-family:var(--sans);overscroll-behavior:none;user-select:none;
+    color:var(--txt);
+    font-family:var(--sans);
+    overscroll-behavior-y: none;
+    user-select:none;
+    /* Убираем overflow: hidden, чтобы страница могла скроллиться */
+    overflow-x: hidden; 
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch;
   }
   body::before{
     content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
@@ -37,18 +51,16 @@
   .app{
     max-width:520px;margin:0 auto;
     padding:10px 14px;
-    padding-bottom: calc(30px + env(safe-area-inset-bottom));
-    height: 100%;
+    /* Отступ снизу с учетом панели браузера */
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
     position:relative;z-index:2; 
     display:flex; flex-direction:column;
+    min-height: 100dvh; /* Растягиваем на весь экран */
   }
   
   .screen{
     display:none; 
-    flex: 1; 
-    overflow-y: auto; 
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 80px; 
+    flex-direction: column; /* Изменено с flex:1 на просто колонку */
     animation: fade .3s ease;
   }
   .screen.on{display:flex; flex-direction:column;}
@@ -107,7 +119,7 @@
   }
 
   /* ============ MAIN MENU ============ */
-  #scr-role { justify-content: space-between; }
+  #scr-role { justify-content: space-between; min-height: 100%; }
   .menu-top { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 10px; }
 
   /* ============ TIMER ============ */
@@ -141,7 +153,7 @@
   .connection { position: absolute; top: 10px; left: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green-glow); z-index: 10; }
   .connection.offline { background: var(--red); box-shadow: 0 0 6px var(--red-glow); animation: blink 1s infinite; }
 
-  /* ============ КОМПАКТНЫЙ СПИСОК ПРЕДЗАПИСЕЙ (В МОДАЛКЕ) ============ */
+  /* ============ КОМПАКТНЫЙ СПИСОК ПРЕДЗАПИСЕЙ ============ */
   .prereg-row {
     display: flex; align-items: center; gap: 8px;
     background: #0c0505; border: 1px solid var(--line); border-radius: 10px;
